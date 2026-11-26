@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>詰パラ演習アプリ</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --bg: #f6f4ef;
+      --card: #ffffff;
+      --text: #1f2421;
+      --sub: #666d68;
+      --accent: #2d5a27;
+      --accent-dark: #1f401b;
+      --ok: #1e7e34;
+      --ng: #c82333;
+      --border: #e0ddd5;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0;
+      width: 100%; height: 100dvh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    .screen {
+      display: none; flex-direction: column;
+      width: 100%; height: 100dvh;
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+    }
+    .screen.active { display: flex; }
+
+    /* ヘッダー */
+    .header {
+      flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--card); border-bottom: 1px solid var(--border);
+      min-height: 50px;
+    }
+    .header-title { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .icon-btn {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      padding: 6px 10px; font-size: 13px; color: var(--text); cursor: pointer;
+    }
+
+    /* ログイン画面 */
+    .center-box {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px; text-align: center; gap: 18px;
+    }
+    .app-logo { font-size: 26px; font-weight: 800; color: var(--accent); letter-spacing: 0.04em; }
+    .sub-text { font-size: 14px; color: var(--sub); line-height: 1.6; }
+
+    /* ホーム画面 */
+    .home-body {
+      flex: 1; overflow-y: auto; padding: 18px 16px;
+      display: flex; flex-direction: column; gap: 16px; max-width: 560px; width: 100%; margin: 0 auto;
+    }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 8px; text-align: center;
+    }
+    .stat-num { font-size: 22px; font-weight: 800; color: var(--accent); }
+    .stat-label { font-size: 11px; color: var(--sub); margin-top: 4px; }
+    .primary-btn {
+      width: 100%; padding: 16px; border: none; border-radius: 14px;
+      background: var(--accent); color: #fff; font-size: 17px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 3px 10px rgba(45,90,39,0.2);
+    }
+    .primary-btn:active { background: var(--accent-dark); transform: scale(0.99); }
+    .primary-btn:disabled { background: #9aa898; box-shadow: none; }
+    .secondary-btn {
+      width: 100%; padding: 13px; border: 1px solid var(--border); border-radius: 12px;
+      background: var(--card); color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer;
+    }
+    .danger-btn {
+      width: 100%; padding: 12px; border: none; border-radius: 10px;
+      background: var(--ng); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+
+    /* 問題・解答画面 */
+    .meta-bar {
+      flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 14px; background: #edeae2; font-size: 12px; color: #3a3f3b;
+    }
+    .board-stage {
+      flex: 1 1 auto; min-height: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 8px; background: #fff; overflow: hidden; position: relative;
+    }
+    .board-stage img {
+      max-width: 100%; max-height: 100%; width: auto; height: auto;
+      object-fit: contain; display: block;
+    }
+    .answer-stage {
+      flex: 1 1 auto; min-height: 0;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      background: #eae7df; padding: 8px;
+      display: flex; flex-direction: column; gap: 10px; align-items: center;
+    }
+    .answer-stage img {
+      width: 100%; max-width: 720px; height: auto;
+      background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    }
+    .bottom-bar {
+      flex: 0 0 auto; padding: 10px 14px 12px;
+      background: var(--card); border-top: 1px solid var(--border);
+      display: flex; gap: 10px;
+    }
+    .btn-ng, .btn-ok {
+      flex: 1; padding: 15px 10px; border: none; border-radius: 12px;
+      color: #fff; font-size: 18px; font-weight: 800; cursor: pointer;
+    }
+    .btn-ng { background: var(--ng); }
+    .btn-ok { background: var(--ok); }
+
+    /* 保護者設定 */
+    .admin-body {
+      flex: 1; overflow-y: auto; padding: 14px;
+      display: flex; flex-direction: column; gap: 16px; max-width: 680px; width: 100%; margin: 0 auto;
+    }
+    .panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .panel h3 { margin: 0; font-size: 15px; border-left: 4px solid var(--accent); padding-left: 8px; }
+    .field label { display: block; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
+    .field input {
+      width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;
+    }
+    .prob-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 0; border-bottom: 1px solid #f0ede6; font-size: 13px;
+    }
+    .del-mini {
+      background: #fdecea; color: var(--ng); border: 1px solid #f5c6cb;
+      border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    }
+
+    /* ローディング・モーダル */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px;
+    }
+    .overlay.show { display: flex; }
+    .modal {
+      background: var(--card); border-radius: 14px; padding: 20px;
+      width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 12px; text-align: center;
+    }
+    .spinner {
+      width: 36px; height: 36px; border: 4px solid #e0ddd5; border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .err-msg { color: var(--ng); font-size: 13px; min-height: 18px; }
+  </style>
+</head>
+<body>
+
+  <!-- 1. ログイン画面 -->
+  <section id="scr-login" class="screen active">
+    <div class="center-box">
+      <div class="app-logo">詰パラ演習アプリ</div>
+      <div class="sub-text">許可されたGoogleアカウントで<br>ログインしてご利用ください</div>
+      <div id="g-signin-btn"></div>
+      <div id="login-err" class="err-msg"></div>
+    </div>
+  </section>
+
+  <!-- 2. ホーム画面 -->
+  <section id="scr-home" class="screen">
+    <div class="header">
+      <div class="header-title">詰パラ演習</div>
+      <div style="display:flex; gap:8px;">
+        <button class="icon-btn" onclick="openPinModal()">⚙ 保護者</button>
+        <button class="icon-btn" onclick="logout()">ログアウト</button>
+      </div>
+    </div>
+    <div class="home-body">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num" id="st-due">-</div>
+          <div class="stat-label">復習待ち</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="st-total">-</div>
+          <div class="stat-label">収録問題数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="st-acc">-</div>
+          <div class="stat-label">累計正答率</div>
+        </div>
+      </div>
+
+      <button id="btn-start" class="primary-btn" onclick="startSession(false)">今日の10問をはじめる</button>
+      <div id="home-msg" class="sub-text" style="text-align:center;"></div>
+    </div>
+  </section>
+
+  <!-- 3. 問題画面 -->
+  <section id="scr-question" class="screen">
+    <div class="header">
+      <div class="header-title" id="q-progress">1 / 10</div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="q-timer" style="font-size:13px; color:var(--sub); font-variant-numeric:tabular-nums;">00:00</span>
+        <button class="icon-btn" onclick="quitSession()">中断</button>
+      </div>
+    </div>
+    <div class="meta-bar">
+      <span id="q-meta-left">-</span>
+      <span id="q-meta-right">-</span>
+    </div>
+    <div class="board-stage">
+      <div id="q-loading" class="spinner"></div>
+      <img id="q-img" alt="問題図" style="display:none;" />
+    </div>
+    <div class="bottom-bar">
+      <button class="primary-btn" onclick="showAnswer()">解答を見る</button>
+    </div>
+  </section>
+
+  <!-- 4. 解答画面 -->
+  <section id="scr-answer" class="screen">
+    <div class="header">
+      <div class="header-title" id="a-title">解答・解説</div>
+      <button class="icon-btn" onclick="backToQuestion()">問題図に戻る</button>
+    </div>
+    <div class="answer-stage" id="a-stage">
+      <div id="a-loading" class="spinner" style="margin:30px auto;"></div>
+      <img id="a-img1" alt="解答1" style="display:none;" />
+      <img id="a-img2" alt="解答2" style="display:none;" />
+      <div class="sub-text" style="font-size:12px;">※画像は2本指で拡大できます</div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-ng" onclick="submitResult(false)">× 不正解</button>
+      <button class="btn-ok" onclick="submitResult(true)">○ 正解</button>
+    </div>
+  </section>
+
+  <!-- 5. 完了画面 -->
+  <section id="scr-done" class="screen">
+    <div class="header">
+      <div class="header-title">おつかれさまでした！</div>
+    </div>
+    <div class="center-box">
+      <div class="app-logo" id="done-score">8 / 10 問正解</div>
+      <div class="sub-text" id="done-sub">今日の演習が完了しました。<br>間違えた問題は次回優先して出題されます。</div>
+      <button class="primary-btn" style="max-width:320px;" onclick="startSession(true)">さらに追加で解く</button>
+      <button class="secondary-btn" style="max-width:320px;" onclick="goHome()">ホームに戻る</button>
+    </div>
+  </section>
+
+  <!-- 6. 保護者設定画面 -->
+  <section id="scr-admin" class="screen">
+    <div class="header">
+      <div class="header-title">保護者設定</div>
+      <button class="icon-btn" onclick="goHome()">閉じる</button>
+    </div>
+    <div class="admin-body">
+      <div class="panel">
+        <h3>新着PDFの自動取り込み</h3>
+        <div class="sub-text" style="font-size:12px;">Googleドライブに新しい号のPDFを入れた後、下のボタンから取り込み画面を開いて▶ボタンを押してください。</div>
+        <button id="btn-colab" class="primary-btn" style="padding:12px; font-size:15px;" onclick="openColab()">新着PDF取り込み画面を開く</button>
+      </div>
+
+      <div class="panel">
+        <h3>基本設定</h3>
+        <div class="field">
+          <label>許可するGoogleメールアドレス（複数の場合はカンマ区切り）</label>
+          <input id="set-emails" type="text" placeholder="aaa@gmail.com, bbb@gmail.com" />
+        </div>
+        <div class="field">
+          <label>1日の出題数</label>
+          <input id="set-limit" type="number" min="1" max="50" />
+        </div>
+        <div class="field">
+          <label>保護者PINコード（数字4桁など）</label>
+          <input id="set-pin" type="text" />
+        </div>
+        <div class="field">
+          <label>Google Colab 取り込みURL</label>
+          <input id="set-colab" type="url" placeholder="https://colab.research.google.com/..." />
+        </div>
+        <button class="primary-btn" style="padding:12px; font-size:15px;" onclick="saveSettings()">設定を保存する</button>
+      </div>
+
+      <div class="panel">
+        <h3>記録の一括消去</h3>
+        <div class="sub-text" style="font-size:12px;">すべての解答履歴と正誤記録をリセットします（問題データ自体は消えません）。</div>
+        <button class="danger-btn" onclick="confirmResetAll()">すべての学習記録を一括消去</button>
+      </div>
+
+      <div class="panel">
+        <h3>問題ごとの消去（<span id="admin-prob-count">0</span>問）</h3>
+        <input id="admin-search" type="text" placeholder="号数・コーナー・作者で絞り込み..." oninput="renderAdminList()" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;" />
+        <div id="admin-prob-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PIN入力モーダル -->
+  <div id="modal-pin" class="overlay">
+    <div class="modal">
+      <div style="font-weight:700; font-size:16px;">保護者PINコードを入力</div>
+      <input id="pin-input" type="password" inputmode="numeric" placeholder="初期値: 1234" style="padding:12px; font-size:18px; text-align:center; border:1px solid var(--border); border-radius:8px;" />
+      <div id="pin-err" class="err-msg"></div>
+      <div style="display:flex; gap:8px;">
+        <button class="secondary-btn" onclick="closePinModal()">キャンセル</button>
+        <button class="primary-btn" style="padding:12px; font-size:15px;" onclick="submitPin()">開く</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 共通ローディング -->
+  <div id="modal-load" class="overlay">
+    <div class="modal" style="max-width:220px;">
+      <div class="spinner"></div>
+      <div id="load-text" style="font-size:14px;">読み込み中...</div>
+    </div>
+  </div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzd8d8v2bS0mU6Go5-EHRHQF_fE6f-gKq-Hvll1Pw3m4W87cZeq_DA8XFcYe9J9rwfjjg/exec';
+const CLIENT_ID = '845371976716-agdsed0c2ksl1dhf090j79rrvobt4bgj.apps.googleusercontent.com';
+
+let idToken = sessionStorage.getItem('tsumepara_token') || '';
+let currentPin = '';
+let sessionProblems = [];
+let sessionIdx = 0;
+let sessionCorrect = 0;
+let solvedIdsToday = [];
+let imgCache = {};
+let timerId = null;
+let elapsedSec = 0;
+let adminProblems = [];
+let colabUrlCache = '';
+
+window.onload = () => {
+  if (typeof google !== 'undefined' && google.accounts) {
+    initGoogleAuth();
+  } else {
+    setTimeout(() => { if (typeof google !== 'undefined') initGoogleAuth(); }, 800);
+  }
+  if (idToken) {
+    loadHome();
+  }
+};
+
+function initGoogleAuth() {
+  google.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: (res) => {
+      idToken = res.credential;
+      sessionStorage.setItem('tsumepara_token', idToken);
+      document.getElementById('login-err').textContent = '';
+      loadHome();
+    }
+  });
+  google.accounts.id.renderButton(document.getElementById('g-signin-btn'), {
+    theme: 'outline', size: 'large', width: 260, text: 'signin_with'
+  });
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setLoading(show, text = '読み込み中...') {
+  document.getElementById('load-text').textContent = text;
+  document.getElementById('modal-load').classList.toggle('show', show);
+}
+
+async function api(action, payload = {}) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, idToken, ...payload })
+  });
+  const json = await res.json();
+  if (json.status !== 'ok') {
+    if (json.message && (json.message.includes('認証') || json.message.includes('ログイン'))) {
+      logout(json.message);
+    }
+    throw new Error(json.message || '通信エラーが発生しました');
+  }
+  return json.data;
+}
+
+function logout(msg = '') {
+  idToken = '';
+  sessionStorage.removeItem('tsumepara_token');
+  stopTimer();
+  showScreen('scr-login');
+  document.getElementById('login-err').textContent = msg;
+}
+
+async function loadHome() {
+  setLoading(true, 'データを読み込み中...');
+  try {
+    const data = await api('getDailyProblems', { excludeIds: [], limit: 1 });
+    document.getElementById('st-due').textContent = data.stats.dueCount;
+    document.getElementById('st-total').textContent = data.stats.totalActive;
+    document.getElementById('st-acc').textContent = data.stats.accuracy + '%';
+    colabUrlCache = data.colabUrl || '';
+
+    const btn = document.getElementById('btn-start');
+    btn.textContent = `今日の${data.dailyLimit}問をはじめる`;
+    if (data.stats.totalActive === 0) {
+      btn.disabled = true;
+      document.getElementById('home-msg').textContent = 'まだ問題が登録されていません。保護者設定からPDFを取り込んでください。';
+    } else {
+      btn.disabled = false;
+      document.getElementById('home-msg').textContent = '';
+    }
+    showScreen('scr-home');
+  } catch (e) {
+    document.getElementById('login-err').textContent = e.message;
+    showScreen('scr-login');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function goHome() {
+  stopTimer();
+  loadHome();
+}
+
+async function startSession(isExtra) {
+  setLoading(true, '問題を用意しています...');
+  try {
+    const data = await api('getDailyProblems', { excludeIds: isExtra ? solvedIdsToday : [] });
+    if (!data.problems || data.problems.length === 0) {
+      alert('出題できる新しい問題がありませんでした。');
+      return;
+    }
+    sessionProblems = data.problems;
+    sessionIdx = 0;
+    sessionCorrect = 0;
+    showCurrentProblem();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function fetchImage(fileId) {
+  if (!fileId) return '';
+  if (imgCache[fileId]) return imgCache[fileId];
+  const data = await api('getImage', { fileId });
+  imgCache[fileId] = data.dataUrl;
+  return data.dataUrl;
+}
+
+async function showCurrentProblem() {
+  const p = sessionProblems[sessionIdx];
+  showScreen('scr-question');
+
+  document.getElementById('q-progress').textContent = `${sessionIdx + 1} / ${sessionProblems.length}`;
+  document.getElementById('q-meta-left').textContent = `${p.issue} ${p.corner} ${p.number}`;
+  document.getElementById('q-meta-right').textContent = `${p.moves ? p.moves + '手' : ''} ${p.author}`;
+
+  const qImg = document.getElementById('q-img');
+  const qLoad = document.getElementById('q-loading');
+  qImg.style.display = 'none';
+  qLoad.style.display = 'block';
+
+  startTimer();
+
+  try {
+    const src = await fetchImage(p.qImgId);
+    qImg.src = src;
+    qImg.style.display = 'block';
+    qLoad.style.display = 'none';
+    // 解答画像と次の問題図を裏で先読み
+    if (p.aImgId1) fetchImage(p.aImgId1).catch(() => {});
+    if (p.aImgId2) fetchImage(p.aImgId2).catch(() => {});
+    if (sessionProblems[sessionIdx + 1]) {
+      fetchImage(sessionProblems[sessionIdx + 1].qImgId).catch(() => {});
+    }
+  } catch (e) {
+    qLoad.style.display = 'none';
+    alert('画像の読み込みに失敗しました: ' + e.message);
+  }
+}
+
+async function showAnswer() {
+  stopTimer();
+  const p = sessionProblems[sessionIdx];
+  showScreen('scr-answer');
+  document.getElementById('a-title').textContent = `解答：${p.corner} ${p.number}`;
+  document.getElementById('a-stage').scrollTop = 0;
+
+  const img1 = document.getElementById('a-img1');
+  const img2 = document.getElementById('a-img2');
+  const aLoad = document.getElementById('a-loading');
+  img1.style.display = 'none';
+  img2.style.display = 'none';
+  aLoad.style.display = 'block';
+
+  try {
+    if (p.aImgId1) {
+      img1.src = await fetchImage(p.aImgId1);
+      img1.style.display = 'block';
+    }
+    if (p.aImgId2) {
+      img2.src = await fetchImage(p.aImgId2);
+      img2.style.display = 'block';
+    }
+  } catch (e) {
+    alert('解答画像の読み込みに失敗しました: ' + e.message);
+  } finally {
+    aLoad.style.display = 'none';
+  }
+}
+
+function backToQuestion() {
+  showScreen('scr-question');
+}
+
+async function submitResult(isCorrect) {
+  const p = sessionProblems[sessionIdx];
+  setLoading(true, '記録中...');
+  try {
+    await api('recordAnswer', { problemId: p.id, isCorrect, elapsedSec });
+    if (isCorrect) sessionCorrect++;
+    solvedIdsToday.push(p.id);
+    sessionIdx++;
+    if (sessionIdx < sessionProblems.length) {
+      showCurrentProblem();
+    } else {
+      document.getElementById('done-score').textContent = `${sessionCorrect} / ${sessionProblems.length} 問正解`;
+      showScreen('scr-done');
+    }
+  } catch (e) {
+    alert('記録に失敗しました: ' + e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function quitSession() {
+  if (confirm('演習を中断してホームに戻りますか？')) goHome();
+}
+
+function startTimer() {
+  stopTimer();
+  elapsedSec = 0;
+  updateTimerView();
+  timerId = setInterval(() => { elapsedSec++; updateTimerView(); }, 1000);
+}
+function stopTimer() {
+  if (timerId) { clearInterval(timerId); timerId = null; }
+}
+function updateTimerView() {
+  const m = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
+  const s = String(elapsedSec % 60).padStart(2, '0');
+  document.getElementById('q-timer').textContent = `${m}:${s}`;
+}
+
+// 保護者設定
+function openPinModal() {
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-err').textContent = '';
+  document.getElementById('modal-pin').classList.add('show');
+  setTimeout(() => document.getElementById('pin-input').focus(), 100);
+}
+function closePinModal() {
+  document.getElementById('modal-pin').classList.remove('show');
+}
+async function submitPin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  if (!pin) return;
+  setLoading(true, '確認中...');
+  try {
+    const data = await api('getAdminData', { pin });
+    currentPin = pin;
+    adminProblems = data.problems || [];
+    document.getElementById('set-emails').value = data.settings['許可メール'] || '';
+    document.getElementById('set-limit').value = data.settings['1日の出題数'] || '10';
+    document.getElementById('set-pin').value = data.settings['PIN'] || '1234';
+    document.getElementById('set-colab').value = data.settings['ColabURL'] || '';
+    colabUrlCache = data.settings['ColabURL'] || '';
+    renderAdminList();
+    closePinModal();
+    showScreen('scr-admin');
+  } catch (e) {
+    document.getElementById('pin-err').textContent = e.message;
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderAdminList() {
+  const kw = document.getElementById('admin-search').value.trim().toLowerCase();
+  const filtered = adminProblems.filter(p =>
+    `${p.issue} ${p.corner} ${p.number} ${p.author}`.toLowerCase().includes(kw)
+  );
+  document.getElementById('admin-prob-count').textContent = filtered.length;
+  const wrap = document.getElementById('admin-prob-list');
+  wrap.innerHTML = '';
+  filtered.slice(0, 150).forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'prob-row';
+    row.innerHTML = `
+      <div>
+        <div style="font-weight:700;">${p.issue} ${p.corner} ${p.number}（${p.moves}手）</div>
+        <div style="font-size:12px; color:var(--sub);">${p.author} ｜ 正解 ${p.corrects}/${p.tries}</div>
+      </div>
+      <button class="del-mini" onclick="deleteOne('${p.id}')">消去</button>
+    `;
+    wrap.appendChild(row);
+  });
+}
+
+async function deleteOne(problemId) {
+  if (!confirm('この問題をアプリの出題対象から消去しますか？')) return;
+  setLoading(true, '消去中...');
+  try {
+    await api('deleteProblem', { pin: currentPin, problemId });
+    adminProblems = adminProblems.filter(p => p.id !== problemId);
+    renderAdminList();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function confirmResetAll() {
+  if (!confirm('本当にすべての解答履歴・正誤記録を消去しますか？')) return;
+  if (!confirm('元に戻せません。実行してよろしいですか？')) return;
+  setLoading(true, '記録を消去中...');
+  try {
+    await api('resetAllRecords', { pin: currentPin });
+    alert('すべての学習記録を消去しました。');
+    adminProblems.forEach(p => { p.tries = 0; p.corrects = 0; });
+    renderAdminList();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function saveSettings() {
+  const newSettings = {
+    '許可メール': document.getElementById('set-emails').value.trim(),
+    '1日の出題数': document.getElementById('set-limit').value.trim() || '10',
+    'PIN': document.getElementById('set-pin').value.trim() || '1234',
+    'ColabURL': document.getElementById('set-colab').value.trim()
+  };
+  setLoading(true, '保存中...');
+  try {
+    await api('updateSettings', { pin: currentPin, newSettings });
+    currentPin = newSettings['PIN'];
+    colabUrlCache = newSettings['ColabURL'];
+    alert('設定を保存しました！');
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function openColab() {
+  const url = document.getElementById('set-colab').value.trim() || colabUrlCache;
+  if (!url) {
+    alert('Google ColabのURLがまだ設定されていません。次のステップで設定します。');
+    return;
+  }
+  window.open(url, '_blank');
+}
+</script>
+</body>
+</html>
