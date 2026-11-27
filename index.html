@@ -37,15 +37,20 @@
     /* ヘッダー */
     .header {
       flex: 0 0 auto;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 14px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 12px;
       background: var(--card); border-bottom: 1px solid var(--border);
-      min-height: 50px;
+      min-height: 46px;
     }
-    .header-title { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-title {
+      font-size: 15px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      min-width: 0;
+    }
     .icon-btn {
       background: none; border: 1px solid var(--border); border-radius: 8px;
       padding: 6px 10px; font-size: 13px; color: var(--text); cursor: pointer;
+      white-space: nowrap; flex-shrink: 0;
     }
 
     /* ログイン画面 */
@@ -70,7 +75,7 @@
     .stat-num { font-size: 22px; font-weight: 800; color: var(--accent); }
     .stat-label { font-size: 11px; color: var(--sub); margin-top: 4px; }
     .primary-btn {
-      width: 100%; padding: 16px; border: none; border-radius: 14px;
+      width: 100%; padding: 15px; border: none; border-radius: 14px;
       background: var(--accent); color: #fff; font-size: 17px; font-weight: 700;
       cursor: pointer; box-shadow: 0 3px 10px rgba(45,90,39,0.2);
     }
@@ -85,7 +90,7 @@
       background: var(--ng); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
     }
 
-    /* 問題・解答画面 */
+    /* 問題画面 */
     .meta-bar {
       flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center;
       padding: 6px 14px; background: #edeae2; font-size: 12px; color: #3a3f3b;
@@ -99,24 +104,119 @@
       max-width: 100%; max-height: 100%; width: auto; height: auto;
       object-fit: contain; display: block;
     }
+
+    /* 解答画面（2分割同時表示） */
+    .ratio-group {
+      display: inline-flex; background: #edeae2; border-radius: 8px; padding: 2px; gap: 2px;
+      flex-shrink: 0;
+    }
+    .ratio-btn {
+      border: none; background: transparent; color: #4a504c;
+      font-size: 12px; font-weight: 700; padding: 5px 8px; border-radius: 6px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .ratio-btn.active {
+      background: var(--card); color: var(--accent);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    }
+
+    .split-wrap {
+      flex: 1 1 auto; min-height: 0;
+      display: flex; flex-direction: column;
+      overflow: hidden; background: #eae7df;
+    }
+    .answer-q-pane {
+      flex: 0 0 auto; height: 43%; min-height: 0;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      padding: 4px 6px; overflow: hidden;
+    }
+    .answer-q-pane.hidden { display: none; }
+    .answer-q-pane img {
+      max-width: 100%; max-height: 100%; width: auto; height: auto;
+      object-fit: contain; display: block;
+    }
+
+    /* 中央ドラッグバー */
+    .split-resizer {
+      flex: 0 0 auto; height: 22px;
+      background: #e5e1d8; border-top: 1px solid #d5d0c5; border-bottom: 1px solid #d5d0c5;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: row-resize; touch-action: none; user-select: none;
+    }
+    .split-resizer.hidden { display: none; }
+    .resizer-grip {
+      width: 38px; height: 4px; border-radius: 99px; background: #9ca39f;
+    }
+    .resizer-hint { font-size: 10px; color: #666d68; font-weight: 600; }
+
+    /* 解答側エリア（ツールバー＋スクロール領域） */
+    .answer-a-col {
+      flex: 1 1 auto; min-height: 0; min-width: 0;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .answer-toolbar {
+      flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      padding: 5px 8px;
+      background: #f3f0e8; border-bottom: 1px solid var(--border);
+    }
+    .page-tabs { display: flex; align-items: center; gap: 4px; }
+    .page-tab {
+      border: 1px solid #cfc9bc; background: #fff; color: #3a3f3b;
+      font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 6px; cursor: pointer;
+    }
+    .page-tab.active {
+      background: #1f2937; color: #fff; border-color: #1f2937;
+    }
+    .zoom-group { display: flex; align-items: center; gap: 3px; }
+    .zoom-btn {
+      border: 1px solid #cfc9bc; background: #fff; color: var(--text);
+      font-size: 13px; font-weight: 700; min-width: 28px; height: 26px;
+      border-radius: 6px; cursor: pointer; padding: 0 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .zoom-val {
+      font-size: 11px; font-weight: 700; color: #3a3f3b;
+      min-width: 42px; text-align: center; cursor: pointer;
+      font-variant-numeric: tabular-nums;
+    }
+
     .answer-stage {
       flex: 1 1 auto; min-height: 0;
-      overflow-y: auto; -webkit-overflow-scrolling: touch;
-      background: #eae7df; padding: 8px;
-      display: flex; flex-direction: column; gap: 10px; align-items: center;
+      overflow: auto; -webkit-overflow-scrolling: touch;
+      background: #eae7df; padding: 4px 3px 10px;
     }
-    .answer-stage img {
-      width: 100%; max-width: 720px; height: auto;
-      background: #fff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    .answer-img-stack {
+      display: flex; flex-direction: column; gap: 6px;
+      width: 100%; transform-origin: top left;
     }
+    .answer-img-stack img {
+      width: 100%; height: auto; display: block;
+      background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+
+    /* iPad・PCなど横長画面では自動で左右2分割 */
+    @media (min-width: 768px) and (orientation: landscape) {
+      .split-wrap { flex-direction: row; }
+      .answer-q-pane {
+        height: auto !important;
+        width: 44%;
+        border-right: 1px solid var(--border);
+      }
+      .split-resizer { display: none !important; }
+      .answer-a-col { flex: 1 1 auto; }
+    }
+
+    /* 下部ボタン */
     .bottom-bar {
-      flex: 0 0 auto; padding: 10px 14px 12px;
+      flex: 0 0 auto; padding: 8px 12px 10px;
       background: var(--card); border-top: 1px solid var(--border);
       display: flex; gap: 10px;
     }
     .btn-ng, .btn-ok {
-      flex: 1; padding: 15px 10px; border: none; border-radius: 12px;
-      color: #fff; font-size: 18px; font-weight: 800; cursor: pointer;
+      flex: 1; padding: 13px 10px; border: none; border-radius: 12px;
+      color: #fff; font-size: 17px; font-weight: 800; cursor: pointer;
     }
     .btn-ng { background: var(--ng); }
     .btn-ok { background: var(--ok); }
@@ -226,18 +326,53 @@
     </div>
   </section>
 
-  <!-- 4. 解答画面 -->
+  <!-- 4. 解答画面（問題図＋解答の同時表示） -->
   <section id="scr-answer" class="screen">
     <div class="header">
-      <div class="header-title" id="a-title">解答・解説</div>
-      <button class="icon-btn" onclick="backToQuestion()">問題図に戻る</button>
+      <div class="header-title" id="a-title">解答</div>
+      <div class="ratio-group" role="group" aria-label="表示比率切替">
+        <button class="ratio-btn active" id="ratio-std" onclick="setSplitMode('std')">標準</button>
+        <button class="ratio-btn" id="ratio-wide" onclick="setSplitMode('wide')">広め</button>
+        <button class="ratio-btn" id="ratio-full" onclick="setSplitMode('full')">解答のみ</button>
+      </div>
     </div>
-    <div class="answer-stage" id="a-stage">
-      <div id="a-loading" class="spinner" style="margin:30px auto;"></div>
-      <img id="a-img1" alt="解答1" style="display:none;" />
-      <img id="a-img2" alt="解答2" style="display:none;" />
-      <div class="sub-text" style="font-size:12px;">※画像は2本指で拡大できます</div>
+
+    <div class="split-wrap" id="split-wrap">
+      <!-- 上段（横画面は左）：問題図を常時固定 -->
+      <div class="answer-q-pane" id="answer-q-pane">
+        <img id="a-q-img" alt="問題図" />
+      </div>
+
+      <!-- 中央ドラッグハンドル（スマホ縦画面用） -->
+      <div class="split-resizer" id="split-resizer" title="上下にドラッグして高さ調整">
+        <div class="resizer-grip"></div>
+        <span class="resizer-hint">上下ドラッグで調整</span>
+      </div>
+
+      <!-- 下段（横画面は右）：解答ツールバー＋解答画像 -->
+      <div class="answer-a-col">
+        <div class="answer-toolbar">
+          <div class="page-tabs">
+            <button class="page-tab active" id="tab-p1" onclick="scrollToAnswerImg(1)">1/2</button>
+            <button class="page-tab" id="tab-p2" onclick="scrollToAnswerImg(2)">2/2</button>
+          </div>
+          <div class="zoom-group">
+            <button class="zoom-btn" onclick="changeZoom(-30)" aria-label="縮小">−</button>
+            <span class="zoom-val" id="zoom-val" onclick="resetZoom()" title="タップで100%に戻す">100%</span>
+            <button class="zoom-btn" onclick="changeZoom(30)" aria-label="拡大">＋</button>
+          </div>
+        </div>
+
+        <div class="answer-stage" id="a-stage" onscroll="syncAnswerPageTab()">
+          <div id="a-loading" class="spinner" style="margin:30px auto;"></div>
+          <div class="answer-img-stack" id="a-img-stack">
+            <img id="a-img1" alt="解答1" style="display:none;" />
+            <img id="a-img2" alt="解答2" style="display:none;" />
+          </div>
+        </div>
+      </div>
     </div>
+
     <div class="bottom-bar">
       <button class="btn-ng" onclick="submitResult(false)">× 不正解</button>
       <button class="btn-ok" onclick="submitResult(true)">○ 正解</button>
@@ -342,7 +477,13 @@ let elapsedSec = 0;
 let adminProblems = [];
 let colabUrlCache = '';
 
+// 解答画面の分割・ズーム状態
+let splitMode = 'std'; // 'std' | 'wide' | 'full' | 'custom'
+let splitRatio = 43;   // 問題図エリアの高さ(%)
+let answerZoom = 100;  // 解答画像の拡大率(%)
+
 window.onload = () => {
+  initSplitResizer();
   if (typeof google !== 'undefined' && google.accounts) {
     initGoogleAuth();
   } else {
@@ -493,12 +634,145 @@ async function showCurrentProblem() {
   }
 }
 
+/* ====== 解答画面（2分割・ズーム・ページ切替） ====== */
+function applySplitLayout() {
+  const qPane = document.getElementById('answer-q-pane');
+  const resizer = document.getElementById('split-resizer');
+
+  document.getElementById('ratio-std').classList.toggle('active', splitMode === 'std');
+  document.getElementById('ratio-wide').classList.toggle('active', splitMode === 'wide');
+  document.getElementById('ratio-full').classList.toggle('active', splitMode === 'full');
+
+  if (splitMode === 'full') {
+    qPane.classList.add('hidden');
+    resizer.classList.add('hidden');
+  } else {
+    qPane.classList.remove('hidden');
+    resizer.classList.remove('hidden');
+    qPane.style.height = splitRatio + '%';
+  }
+}
+
+function setSplitMode(mode) {
+  splitMode = mode;
+  if (mode === 'std') splitRatio = 43;
+  else if (mode === 'wide') splitRatio = 28;
+  applySplitLayout();
+}
+
+function initSplitResizer() {
+  const resizer = document.getElementById('split-resizer');
+  const wrap = document.getElementById('split-wrap');
+  let dragging = false;
+
+  const updateFromClientY = (clientY) => {
+    const rect = wrap.getBoundingClientRect();
+    if (rect.height <= 0) return;
+    let pct = ((clientY - rect.top) / rect.height) * 100;
+    pct = Math.max(18, Math.min(70, pct));
+    splitMode = 'custom';
+    splitRatio = Math.round(pct);
+    applySplitLayout();
+  };
+
+  resizer.addEventListener('touchstart', (e) => {
+    dragging = true;
+    e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!dragging || !e.touches.length) return;
+    updateFromClientY(e.touches[0].clientY);
+    e.preventDefault();
+  }, { passive: false });
+
+  window.addEventListener('touchend', () => { dragging = false; });
+
+  resizer.addEventListener('mousedown', (e) => {
+    dragging = true;
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    updateFromClientY(e.clientY);
+  });
+
+  window.addEventListener('mouseup', () => { dragging = false; });
+}
+
+function applyZoom() {
+  const stack = document.getElementById('a-img-stack');
+  stack.style.width = answerZoom + '%';
+  document.getElementById('zoom-val').textContent = answerZoom + '%';
+}
+
+function changeZoom(delta) {
+  answerZoom = Math.max(100, Math.min(250, answerZoom + delta));
+  applyZoom();
+}
+
+function resetZoom() {
+  answerZoom = 100;
+  applyZoom();
+  document.getElementById('a-stage').scrollLeft = 0;
+}
+
+function scrollToAnswerImg(pageNum) {
+  const stage = document.getElementById('a-stage');
+  const target = document.getElementById(pageNum === 1 ? 'a-img1' : 'a-img2');
+  if (!target || target.style.display === 'none') return;
+  stage.scrollTo({ top: Math.max(0, target.offsetTop - 4), behavior: 'smooth' });
+  setActivePageTab(pageNum);
+}
+
+function setActivePageTab(pageNum) {
+  document.getElementById('tab-p1').classList.toggle('active', pageNum === 1);
+  document.getElementById('tab-p2').classList.toggle('active', pageNum === 2);
+}
+
+function syncAnswerPageTab() {
+  const img2 = document.getElementById('a-img2');
+  if (!img2 || img2.style.display === 'none') return;
+  const stage = document.getElementById('a-stage');
+  const threshold = img2.offsetTop - stage.clientHeight * 0.35;
+  setActivePageTab(stage.scrollTop >= threshold ? 2 : 1);
+}
+
 async function showAnswer() {
   stopTimer();
   const p = sessionProblems[sessionIdx];
   showScreen('scr-answer');
-  document.getElementById('a-title').textContent = `解答：${p.corner} ${p.number}`;
-  document.getElementById('a-stage').scrollTop = 0;
+
+  // ヘッダーに簡潔なタイトル（省略防止）
+  const movesStr = p.moves ? `（${p.moves}手）` : '';
+  document.getElementById('a-title').textContent = `${sessionIdx + 1}/${sessionProblems.length} ${p.number}${movesStr}`;
+
+  // 前回「解答のみ」にしていた場合は次問で見やすいよう標準に戻す
+  if (splitMode === 'full') setSplitMode('std');
+  else applySplitLayout();
+
+  // ズームとスクロールをリセット
+  resetZoom();
+  const stage = document.getElementById('a-stage');
+  stage.scrollTop = 0;
+
+  // 上段の問題図をセット
+  const aQImg = document.getElementById('a-q-img');
+  const qSrc = imgCache[p.qImgId] || document.getElementById('q-img').src;
+  if (qSrc) {
+    aQImg.src = qSrc;
+  } else {
+    fetchImage(p.qImgId).then(src => { aQImg.src = src; }).catch(() => {});
+  }
+
+  // ページ切替タブの調整（1枚のみ／2枚あり）
+  const hasTwo = Boolean(p.aImgId2);
+  const tab1 = document.getElementById('tab-p1');
+  const tab2 = document.getElementById('tab-p2');
+  tab1.textContent = hasTwo ? '1/2' : '1/1';
+  tab2.style.display = hasTwo ? 'inline-block' : 'none';
+  setActivePageTab(1);
 
   const img1 = document.getElementById('a-img1');
   const img2 = document.getElementById('a-img2');
@@ -521,10 +795,6 @@ async function showAnswer() {
   } finally {
     aLoad.style.display = 'none';
   }
-}
-
-function backToQuestion() {
-  showScreen('scr-question');
 }
 
 async function submitResult(isCorrect) {
@@ -609,11 +879,12 @@ function renderAdminList() {
   const wrap = document.getElementById('admin-prob-list');
   wrap.innerHTML = '';
   filtered.slice(0, 150).forEach(p => {
+    const movesText = p.moves ? `（${p.moves}手）` : '';
     const row = document.createElement('div');
     row.className = 'prob-row';
     row.innerHTML = `
       <div>
-        <div style="font-weight:700;">${p.issue} ${p.corner} ${p.number}（${p.moves}手）</div>
+        <div style="font-weight:700;">${p.issue} ${p.corner} ${p.number}${movesText}</div>
         <div style="font-size:12px; color:var(--sub);">${p.author} ｜ 正解 ${p.corrects}/${p.tries}</div>
       </div>
       <button class="del-mini" onclick="deleteOne('${p.id}')">消去</button>
