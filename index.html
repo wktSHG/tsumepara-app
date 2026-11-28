@@ -18,6 +18,9 @@
       --ok: #1e7e34;
       --ng: #c82333;
       --border: #e0ddd5;
+      --gold: #c98a1c;
+      --gold-bg: #fff8e6;
+      --flame: #e85d04;
     }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body {
@@ -64,15 +67,148 @@
 
     /* ホーム画面 */
     .home-body {
-      flex: 1; overflow-y: auto; padding: 18px 16px;
-      display: flex; flex-direction: column; gap: 16px; max-width: 560px; width: 100%; margin: 0 auto;
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 14px 14px 24px;
+      display: flex; flex-direction: column; gap: 14px;
+      max-width: 560px; width: 100%; margin: 0 auto;
     }
+
+    /* 連続記録＆今日の進捗カード */
+    .streak-card {
+      background: linear-gradient(135deg, #ffffff 0%, #fbf8f0 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .streak-top {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .streak-main {
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .streak-fire { font-size: 26px; line-height: 1; }
+    .streak-num {
+      font-size: 32px; font-weight: 900; color: var(--flame);
+      line-height: 1; font-variant-numeric: tabular-nums;
+    }
+    .streak-unit { font-size: 14px; font-weight: 700; color: var(--text); }
+    .streak-sub-badges {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+      font-size: 11px; color: var(--sub); font-weight: 600;
+    }
+    .streak-sub-badges span strong { color: var(--text); font-size: 12px; }
+
+    .today-progress-wrap {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .today-progress-head {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; font-weight: 700;
+    }
+    .today-status-badge {
+      padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 700;
+      background: #edeae2; color: #4a504c;
+    }
+    .today-status-badge.done {
+      background: #e6f4ea; color: var(--ok);
+    }
+    .today-status-badge.pending {
+      background: #fff3e0; color: #c45100;
+    }
+    .progress-track {
+      width: 100%; height: 10px; border-radius: 99px;
+      background: #e9e5dc; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; width: 0%; border-radius: 99px;
+      background: linear-gradient(90deg, #43853d, #2d5a27);
+      transition: width 0.35s ease;
+    }
+    .progress-fill.done {
+      background: linear-gradient(90deg, #e0a82e, #c98a1c);
+    }
+
+    /* スタンプカレンダー */
+    .cal-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 12px 12px 14px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .cal-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .cal-month-label {
+      font-size: 15px; font-weight: 800; color: var(--text);
+    }
+    .cal-nav-btn {
+      border: 1px solid var(--border); background: #faf8f4; color: var(--text);
+      border-radius: 8px; padding: 4px 11px; font-size: 13px; font-weight: 700; cursor: pointer;
+    }
+    .cal-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      text-align: center; font-size: 11px; font-weight: 700; color: var(--sub);
+    }
+    .cal-weekdays .sun { color: #c82333; }
+    .cal-weekdays .sat { color: #1d5fa7; }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
+    }
+    .cal-cell {
+      aspect-ratio: 1 / 1.05;
+      border-radius: 10px;
+      background: #faf9f6;
+      border: 1px solid #efece5;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between;
+      padding: 4px 2px 3px;
+      position: relative;
+    }
+    .cal-cell.empty {
+      background: transparent; border-color: transparent;
+    }
+    .cal-cell.today {
+      border: 2px solid var(--accent);
+      background: #f3f8f2;
+    }
+    .cal-cell.partial {
+      background: #eef6ed;
+      border-color: #c8dfc6;
+    }
+    .cal-cell.achieved {
+      background: var(--gold-bg);
+      border: 1.5px solid #e3b95c;
+    }
+    .cal-cell.achieved.today {
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 0 2px rgba(201,138,28,0.18);
+    }
+    .cal-day-num {
+      font-size: 11px; font-weight: 700; color: #505652; line-height: 1;
+    }
+    .cal-cell.sun .cal-day-num { color: #c82333; }
+    .cal-cell.sat .cal-day-num { color: #1d5fa7; }
+    .cal-mark {
+      font-size: 16px; line-height: 1; font-weight: 800; color: var(--gold);
+    }
+    .cal-count {
+      font-size: 9px; font-weight: 700; color: #7a6330; line-height: 1;
+    }
+    .cal-count.partial-cnt {
+      color: var(--accent); font-size: 10px;
+    }
+    .cal-legend {
+      display: flex; justify-content: flex-end; gap: 12px;
+      font-size: 11px; color: var(--sub); padding-top: 2px;
+    }
+
     .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .stat-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 14px 8px; text-align: center;
+      padding: 12px 8px; text-align: center;
     }
-    .stat-num { font-size: 22px; font-weight: 800; color: var(--accent); }
+    .stat-num { font-size: 20px; font-weight: 800; color: var(--accent); }
     .stat-label { font-size: 11px; color: var(--sub); margin-top: 4px; }
     .primary-btn {
       width: 100%; padding: 15px; border: none; border-radius: 14px;
@@ -251,8 +387,30 @@
     }
     .overlay.show { display: flex; }
     .modal {
-      background: var(--card); border-radius: 14px; padding: 20px;
+      background: var(--card); border-radius: 16px; padding: 22px 20px;
       width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 12px; text-align: center;
+    }
+    .celebrate-modal {
+      border: 2px solid #e3b95c;
+      background: linear-gradient(180deg, #fffdf7 0%, #fff8e6 100%);
+      animation: popIn 0.28s ease-out;
+    }
+    .celebrate-stamp {
+      width: 68px; height: 68px; margin: 0 auto;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f5c542, #c98a1c);
+      color: #fff; font-size: 36px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 16px rgba(201,138,28,0.35);
+    }
+    .celebrate-title { font-size: 20px; font-weight: 900; color: var(--accent); }
+    .celebrate-streak {
+      font-size: 17px; font-weight: 800; color: var(--flame);
+      background: #fff; border: 1px solid #f0d799; border-radius: 10px; padding: 8px 10px;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0.86); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
     }
     .spinner {
       width: 36px; height: 36px; border: 4px solid #e0ddd5; border-top-color: var(--accent);
@@ -284,6 +442,51 @@
       </div>
     </div>
     <div class="home-body">
+      <!-- 連続記録＆今日の進捗 -->
+      <div class="streak-card">
+        <div class="streak-top">
+          <div class="streak-main">
+            <span class="streak-fire">🔥</span>
+            <span class="streak-num" id="st-streak">0</span>
+            <span class="streak-unit">日連続</span>
+          </div>
+          <div class="streak-sub-badges">
+            <span>🏆 最長 <strong id="st-best">0日</strong></span>
+            <span>☖ 達成累計 <strong id="st-days">0日</strong></span>
+          </div>
+        </div>
+        <div class="today-progress-wrap">
+          <div class="today-progress-head">
+            <span id="today-prog-text">今日のスタンプ進捗：0 / 5問</span>
+            <span id="today-status-badge" class="today-status-badge">あと5問</span>
+          </div>
+          <div class="progress-track">
+            <div id="today-prog-fill" class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <button id="btn-start" class="primary-btn" onclick="startSession(false)">今日の10問をはじめる</button>
+      <div id="home-msg" class="sub-text" style="text-align:center; display:none;"></div>
+
+      <!-- スタンプカレンダー -->
+      <div class="cal-card">
+        <div class="cal-header">
+          <button class="cal-nav-btn" onclick="moveCalMonth(-1)">◀</button>
+          <div class="cal-month-label" id="cal-month-label">2026年11月</div>
+          <button class="cal-nav-btn" onclick="moveCalMonth(1)">▶</button>
+        </div>
+        <div class="cal-weekdays">
+          <div class="sun">日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div class="sat">土</div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-legend">
+          <span><strong style="color:var(--gold);">☖</strong> <span id="cal-goal-legend">5問以上達成</span></span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#eef6ed;border:1px solid #c8dfc6;vertical-align:middle;"></span> 途中</span>
+        </div>
+      </div>
+
+      <!-- 統計カード -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-num" id="st-due">-</div>
@@ -298,9 +501,6 @@
           <div class="stat-label">累計正答率</div>
         </div>
       </div>
-
-      <button id="btn-start" class="primary-btn" onclick="startSession(false)">今日の10問をはじめる</button>
-      <div id="home-msg" class="sub-text" style="text-align:center;"></div>
     </div>
   </section>
 
@@ -338,18 +538,15 @@
     </div>
 
     <div class="split-wrap" id="split-wrap">
-      <!-- 上段（横画面は左）：問題図を常時固定 -->
       <div class="answer-q-pane" id="answer-q-pane">
         <img id="a-q-img" alt="問題図" />
       </div>
 
-      <!-- 中央ドラッグハンドル（スマホ縦画面用） -->
       <div class="split-resizer" id="split-resizer" title="上下にドラッグして高さ調整">
         <div class="resizer-grip"></div>
         <span class="resizer-hint">上下ドラッグで調整</span>
       </div>
 
-      <!-- 下段（横画面は右）：解答ツールバー＋解答画像 -->
       <div class="answer-a-col">
         <div class="answer-toolbar">
           <div class="page-tabs">
@@ -386,9 +583,10 @@
     </div>
     <div class="center-box">
       <div class="app-logo" id="done-score">8 / 10 問正解</div>
+      <div id="done-streak-box" class="celebrate-streak" style="width:100%; max-width:320px;">🔥 連続 1日達成！</div>
       <div class="sub-text" id="done-sub">今日の演習が完了しました。<br>間違えた問題は次回優先して出題されます。</div>
       <button class="primary-btn" style="max-width:320px;" onclick="startSession(true)">さらに追加で解く</button>
-      <button class="secondary-btn" style="max-width:320px;" onclick="goHome()">ホームに戻る</button>
+      <button class="secondary-btn" style="max-width:320px;" onclick="goHome()">ホームでカレンダーを見る</button>
     </div>
   </section>
 
@@ -412,8 +610,12 @@
           <input id="set-emails" type="text" placeholder="aaa@gmail.com, bbb@gmail.com" />
         </div>
         <div class="field">
-          <label>1日の出題数</label>
+          <label>1日の出題数（1セットの問題数）</label>
           <input id="set-limit" type="number" min="1" max="50" />
+        </div>
+        <div class="field">
+          <label>1日のスタンプ目標数（カレンダーに印が付く問数）</label>
+          <input id="set-goal" type="number" min="1" max="50" placeholder="5" />
         </div>
         <div class="field">
           <label>保護者PINコード（数字4桁など）</label>
@@ -439,6 +641,17 @@
       </div>
     </div>
   </section>
+
+  <!-- 目標達成お祝いモーダル -->
+  <div id="modal-celebrate" class="overlay">
+    <div class="modal celebrate-modal">
+      <div class="celebrate-stamp">☖</div>
+      <div class="celebrate-title" id="cel-title">今日の目標 5問達成！</div>
+      <div class="sub-text" style="font-size:13px;">カレンダーに今日の印が付きました！</div>
+      <div class="celebrate-streak" id="cel-streak">🔥 連続 1日達成！</div>
+      <button class="primary-btn" style="padding:13px; font-size:15px;" onclick="closeCelebrateModal()">つづける</button>
+    </div>
+  </div>
 
   <!-- PIN入力モーダル -->
   <div id="modal-pin" class="overlay">
@@ -476,6 +689,12 @@ let timerId = null;
 let elapsedSec = 0;
 let adminProblems = [];
 let colabUrlCache = '';
+
+// 連続記録・カレンダー状態
+let streakState = null;
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth() + 1;
+let pendingAfterCelebrate = null;
 
 // 解答画面の分割・ズーム状態
 let splitMode = 'std'; // 'std' | 'wide' | 'full' | 'custom'
@@ -543,6 +762,125 @@ function logout(msg = '') {
   document.getElementById('login-err').textContent = msg;
 }
 
+/* ====== 連続記録＆カレンダー描画 ====== */
+function renderStreakAndCalendar(streak) {
+  if (!streak) return;
+  streakState = streak;
+
+  const [ty, tm] = (streak.todayKey || '').split('-').map(Number);
+  if (ty && tm && !calYear) {
+    calYear = ty;
+    calMonth = tm;
+  }
+
+  document.getElementById('st-streak').textContent = streak.currentStreak;
+  document.getElementById('st-best').textContent = `${streak.bestStreak}日`;
+  document.getElementById('st-days').textContent = `${streak.totalAchievedDays}日`;
+
+  const goal = streak.goal || 5;
+  const cnt = streak.todayCount || 0;
+  const pct = Math.min(100, Math.round((cnt / goal) * 100));
+
+  document.getElementById('today-prog-text').textContent = `今日のスタンプ進捗：${cnt} / ${goal}問`;
+  document.getElementById('cal-goal-legend').textContent = `${goal}問以上達成`;
+
+  const badge = document.getElementById('today-status-badge');
+  const fill = document.getElementById('today-prog-fill');
+  fill.style.width = pct + '%';
+
+  if (streak.todayAchieved) {
+    badge.textContent = '🎉 達成済み！';
+    badge.className = 'today-status-badge done';
+    fill.classList.add('done');
+  } else {
+    const rem = Math.max(1, goal - cnt);
+    if (streak.streakPendingToday) {
+      badge.textContent = `あと${rem}問で${streak.currentStreak + 1}日連続！`;
+      badge.className = 'today-status-badge pending';
+    } else {
+      badge.textContent = `スタンプまであと${rem}問`;
+      badge.className = 'today-status-badge';
+    }
+    fill.classList.remove('done');
+  }
+
+  renderCalendarGrid();
+}
+
+function moveCalMonth(delta) {
+  calMonth += delta;
+  if (calMonth < 1) { calMonth = 12; calYear--; }
+  else if (calMonth > 12) { calMonth = 1; calYear++; }
+  renderCalendarGrid();
+}
+
+function renderCalendarGrid() {
+  if (!streakState) return;
+  document.getElementById('cal-month-label').textContent = `${calYear}年${calMonth}月`;
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  const firstDow = new Date(calYear, calMonth - 1, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+  const counts = streakState.dailyCounts || {};
+  const goal = streakState.goal || 5;
+  const todayKey = streakState.todayKey || '';
+
+  for (let i = 0; i < firstDow; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-cell empty';
+    grid.appendChild(empty);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dow = (firstDow + day - 1) % 7;
+    const key = `${calYear}-${String(calMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const c = counts[key] || 0;
+    const achieved = c >= goal;
+
+    const cell = document.createElement('div');
+    let cls = 'cal-cell';
+    if (dow === 0) cls += ' sun';
+    if (dow === 6) cls += ' sat';
+    if (key === todayKey) cls += ' today';
+    if (achieved) cls += ' achieved';
+    else if (c > 0) cls += ' partial';
+    cell.className = cls;
+
+    if (achieved) {
+      cell.innerHTML = `
+        <div class="cal-day-num">${day}</div>
+        <div class="cal-mark">☖</div>
+        <div class="cal-count">${c}問</div>
+      `;
+    } else if (c > 0) {
+      cell.innerHTML = `
+        <div class="cal-day-num">${day}</div>
+        <div class="cal-count partial-cnt">${c}/${goal}</div>
+      `;
+    } else {
+      cell.innerHTML = `<div class="cal-day-num">${day}</div><div></div>`;
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function openCelebrateModal(streak, onClose) {
+  pendingAfterCelebrate = onClose;
+  document.getElementById('cel-title').textContent = `今日の目標 ${streak.goal}問達成！`;
+  const bestNote = (streak.currentStreak >= streak.bestStreak && streak.currentStreak > 1) ? '（自己ベスト！）' : '';
+  document.getElementById('cel-streak').textContent = `🔥 連続 ${streak.currentStreak}日達成！${bestNote}`;
+  document.getElementById('modal-celebrate').classList.add('show');
+}
+
+function closeCelebrateModal() {
+  document.getElementById('modal-celebrate').classList.remove('show');
+  const cb = pendingAfterCelebrate;
+  pendingAfterCelebrate = null;
+  if (cb) cb();
+}
+
 async function loadHome() {
   setLoading(true, 'データを読み込み中...');
   try {
@@ -552,14 +890,24 @@ async function loadHome() {
     document.getElementById('st-acc').textContent = data.stats.accuracy + '%';
     colabUrlCache = data.colabUrl || '';
 
+    if (data.streak) {
+      const [ty, tm] = data.streak.todayKey.split('-').map(Number);
+      calYear = ty;
+      calMonth = tm;
+      renderStreakAndCalendar(data.streak);
+    }
+
     const btn = document.getElementById('btn-start');
+    const msg = document.getElementById('home-msg');
     btn.textContent = `今日の${data.dailyLimit}問をはじめる`;
     if (data.stats.totalActive === 0) {
       btn.disabled = true;
-      document.getElementById('home-msg').textContent = 'まだ問題が登録されていません。保護者設定からPDFを取り込んでください。';
+      msg.style.display = 'block';
+      msg.textContent = 'まだ問題が登録されていません。保護者設定からPDFを取り込んでください。';
     } else {
       btn.disabled = false;
-      document.getElementById('home-msg').textContent = '';
+      msg.style.display = 'none';
+      msg.textContent = '';
     }
     showScreen('scr-home');
   } catch (e) {
@@ -583,6 +931,7 @@ async function startSession(isExtra) {
       alert('出題できる新しい問題がありませんでした。');
       return;
     }
+    if (data.streak) streakState = data.streak;
     sessionProblems = data.problems;
     sessionIdx = 0;
     sessionCorrect = 0;
@@ -622,7 +971,6 @@ async function showCurrentProblem() {
     qImg.src = src;
     qImg.style.display = 'block';
     qLoad.style.display = 'none';
-    // 解答画像と次の問題図を裏で先読み
     if (p.aImgId1) fetchImage(p.aImgId1).catch(() => {});
     if (p.aImgId2) fetchImage(p.aImgId2).catch(() => {});
     if (sessionProblems[sessionIdx + 1]) {
@@ -744,20 +1092,16 @@ async function showAnswer() {
   const p = sessionProblems[sessionIdx];
   showScreen('scr-answer');
 
-  // ヘッダーに簡潔なタイトル（省略防止）
   const movesStr = p.moves ? `（${p.moves}手）` : '';
   document.getElementById('a-title').textContent = `${sessionIdx + 1}/${sessionProblems.length} ${p.number}${movesStr}`;
 
-  // 前回「解答のみ」にしていた場合は次問で見やすいよう標準に戻す
   if (splitMode === 'full') setSplitMode('std');
   else applySplitLayout();
 
-  // ズームとスクロールをリセット
   resetZoom();
   const stage = document.getElementById('a-stage');
   stage.scrollTop = 0;
 
-  // 上段の問題図をセット
   const aQImg = document.getElementById('a-q-img');
   const qSrc = imgCache[p.qImgId] || document.getElementById('q-img').src;
   if (qSrc) {
@@ -766,7 +1110,6 @@ async function showAnswer() {
     fetchImage(p.qImgId).then(src => { aQImg.src = src; }).catch(() => {});
   }
 
-  // ページ切替タブの調整（1枚のみ／2枚あり）
   const hasTwo = Boolean(p.aImgId2);
   const tab1 = document.getElementById('tab-p1');
   const tab2 = document.getElementById('tab-p2');
@@ -797,20 +1140,46 @@ async function showAnswer() {
   }
 }
 
+function showDoneScreen() {
+  document.getElementById('done-score').textContent = `${sessionCorrect} / ${sessionProblems.length} 問正解`;
+  const box = document.getElementById('done-streak-box');
+  if (streakState) {
+    if (streakState.todayAchieved) {
+      box.textContent = `☖ 今日のスタンプ獲得！（本日${streakState.todayCount}問｜🔥 ${streakState.currentStreak}日連続）`;
+    } else {
+      const rem = Math.max(1, streakState.goal - streakState.todayCount);
+      box.textContent = `本日 ${streakState.todayCount} / ${streakState.goal}問（スタンプまであと${rem}問）`;
+    }
+  }
+  showScreen('scr-done');
+}
+
 async function submitResult(isCorrect) {
   const p = sessionProblems[sessionIdx];
   setLoading(true, '記録中...');
   try {
-    await api('recordAnswer', { problemId: p.id, isCorrect, elapsedSec });
+    const res = await api('recordAnswer', { problemId: p.id, isCorrect, elapsedSec });
+    if (res && res.streak) {
+      streakState = res.streak;
+    }
     if (isCorrect) sessionCorrect++;
     solvedIdsToday.push(p.id);
     sessionIdx++;
-    if (sessionIdx < sessionProblems.length) {
-      showCurrentProblem();
-    } else {
-      document.getElementById('done-score').textContent = `${sessionCorrect} / ${sessionProblems.length} 問正解`;
-      showScreen('scr-done');
+
+    const proceed = () => {
+      if (sessionIdx < sessionProblems.length) {
+        showCurrentProblem();
+      } else {
+        showDoneScreen();
+      }
+    };
+
+    if (res && res.justAchievedToday && res.streak) {
+      setLoading(false);
+      openCelebrateModal(res.streak, proceed);
+      return;
     }
+    proceed();
   } catch (e) {
     alert('記録に失敗しました: ' + e.message);
   } finally {
@@ -857,6 +1226,7 @@ async function submitPin() {
     adminProblems = data.problems || [];
     document.getElementById('set-emails').value = data.settings['許可メール'] || '';
     document.getElementById('set-limit').value = data.settings['1日の出題数'] || '10';
+    document.getElementById('set-goal').value = data.settings['1日のスタンプ目標数'] || '5';
     document.getElementById('set-pin').value = data.settings['PIN'] || '1234';
     document.getElementById('set-colab').value = data.settings['ColabURL'] || '';
     colabUrlCache = data.settings['ColabURL'] || '';
@@ -927,6 +1297,7 @@ async function saveSettings() {
   const newSettings = {
     '許可メール': document.getElementById('set-emails').value.trim(),
     '1日の出題数': document.getElementById('set-limit').value.trim() || '10',
+    '1日のスタンプ目標数': document.getElementById('set-goal').value.trim() || '5',
     'PIN': document.getElementById('set-pin').value.trim() || '1234',
     'ColabURL': document.getElementById('set-colab').value.trim()
   };
