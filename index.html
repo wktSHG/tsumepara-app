@@ -1,956 +1,455 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <title>詰パラ演習アプリ</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <style>
-    :root {
-      --bg: #f6f4ef;
-      --card: #ffffff;
-      --text: #1f2421;
-      --sub: #666d68;
-      --accent: #2d5a27;
-      --accent-dark: #1f401b;
-      --ok: #1e7e34;
-      --ng: #c82333;
-      --border: #e0ddd5;
-    }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      margin: 0; padding: 0;
-      width: 100%; height: 100dvh;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
-      background: var(--bg); color: var(--text);
-    }
-    .screen {
-      display: none; flex-direction: column;
-      width: 100%; height: 100dvh;
-      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
-    }
-    .screen.active { display: flex; }
+// ==========================================
+// 詰パラ演習アプリ バックエンド (GAS)
+// カレンダー印・連続記録（ストリーク）対応版
+// ==========================================
 
-    /* ヘッダー */
-    .header {
-      flex: 0 0 auto;
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 8px 12px;
-      background: var(--card); border-bottom: 1px solid var(--border);
-      min-height: 46px;
-    }
-    .header-title {
-      font-size: 15px; font-weight: 700;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      min-width: 0;
-    }
-    .icon-btn {
-      background: none; border: 1px solid var(--border); border-radius: 8px;
-      padding: 6px 10px; font-size: 13px; color: var(--text); cursor: pointer;
-      white-space: nowrap; flex-shrink: 0;
-    }
+function setupSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. 問題一覧シート
+  let qSheet = ss.getSheetByName('問題一覧');
+  if (!qSheet) {
+    qSheet = ss.getSheets()[0];
+    qSheet.setName('問題一覧');
+  }
+  if (qSheet.getLastRow() === 0) {
+    qSheet.appendRow([
+      '問題ID', '号数', 'コーナー', '問題番号', '作者', '手数',
+      '問題画像ID', '解答画像ID1', '解答画像ID2', 'ステータス',
+      '次回出題日', '連続正解数', '累計出題数', '累計正解数', '最終解答日'
+    ]);
+  }
 
-    /* ログイン画面 */
-    .center-box {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 24px; text-align: center; gap: 18px;
-    }
-    .app-logo { font-size: 26px; font-weight: 800; color: var(--accent); letter-spacing: 0.04em; }
-    .sub-text { font-size: 14px; color: var(--sub); line-height: 1.6; }
+  // 2. 解答履歴シート
+  let hSheet = ss.getSheetByName('解答履歴');
+  if (!hSheet) {
+    hSheet = ss.insertSheet('解答履歴');
+    hSheet.appendRow(['日時', '問題ID', 'ユーザー', '正誤', '解答時間秒']);
+  }
 
-    /* ホーム画面 */
-    .home-body {
-      flex: 1; overflow-y: auto; padding: 18px 16px;
-      display: flex; flex-direction: column; gap: 16px; max-width: 560px; width: 100%; margin: 0 auto;
-    }
-    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .stat-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 14px 8px; text-align: center;
-    }
-    .stat-num { font-size: 22px; font-weight: 800; color: var(--accent); }
-    .stat-label { font-size: 11px; color: var(--sub); margin-top: 4px; }
-    .primary-btn {
-      width: 100%; padding: 15px; border: none; border-radius: 14px;
-      background: var(--accent); color: #fff; font-size: 17px; font-weight: 700;
-      cursor: pointer; box-shadow: 0 3px 10px rgba(45,90,39,0.2);
-    }
-    .primary-btn:active { background: var(--accent-dark); transform: scale(0.99); }
-    .primary-btn:disabled { background: #9aa898; box-shadow: none; }
-    .secondary-btn {
-      width: 100%; padding: 13px; border: 1px solid var(--border); border-radius: 12px;
-      background: var(--card); color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer;
-    }
-    .danger-btn {
-      width: 100%; padding: 12px; border: none; border-radius: 10px;
-      background: var(--ng); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
-    }
+  // 3. 設定シート
+  let sSheet = ss.getSheetByName('設定');
+  if (!sSheet) {
+    sSheet = ss.insertSheet('設定');
+    const ownerEmail = Session.getActiveUser().getEmail() || '';
+    sSheet.appendRow(['キー', '値']);
+    sSheet.appendRow(['PIN', '1234']);
+    sSheet.appendRow(['許可メール', ownerEmail]);
+    sSheet.appendRow(['1日の出題数', '10']);
+    sSheet.appendRow(['ColabURL', '']);
+    sSheet.appendRow(['1日のスタンプ目標数', '5']);
+  }
 
-    /* 問題画面 */
-    .meta-bar {
-      flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center;
-      padding: 6px 14px; background: #edeae2; font-size: 12px; color: #3a3f3b;
-    }
-    .board-stage {
-      flex: 1 1 auto; min-height: 0;
-      display: flex; align-items: center; justify-content: center;
-      padding: 8px; background: #fff; overflow: hidden; position: relative;
-    }
-    .board-stage img {
-      max-width: 100%; max-height: 100%; width: auto; height: auto;
-      object-fit: contain; display: block;
-    }
+  // 4. 処理済みPDFシート
+  let pSheet = ss.getSheetByName('処理済みPDF');
+  if (!pSheet) {
+    pSheet = ss.insertSheet('処理済みPDF');
+    pSheet.appendRow(['ファイル名', '処理日時', '登録問題数']);
+  }
+}
 
-    /* 解答画面（2分割同時表示） */
-    .ratio-group {
-      display: inline-flex; background: #edeae2; border-radius: 8px; padding: 2px; gap: 2px;
-      flex-shrink: 0;
-    }
-    .ratio-btn {
-      border: none; background: transparent; color: #4a504c;
-      font-size: 12px; font-weight: 700; padding: 5px 8px; border-radius: 6px;
-      cursor: pointer; white-space: nowrap;
-    }
-    .ratio-btn.active {
-      background: var(--card); color: var(--accent);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
-    }
+// 設定値を取得
+function getSettingsMap() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sSheet = ss.getSheetByName('設定');
+  const data = sSheet.getDataRange().getValues();
+  const map = {};
+  for (let i = 1; i < data.length; i++) {
+    map[String(data[i][0]).trim()] = String(data[i][1]).trim();
+  }
+  return map;
+}
 
-    .split-wrap {
-      flex: 1 1 auto; min-height: 0;
-      display: flex; flex-direction: column;
-      overflow: hidden; background: #eae7df;
-    }
-    .answer-q-pane {
-      flex: 0 0 auto; height: 43%; min-height: 0;
-      background: #fff;
-      display: flex; align-items: center; justify-content: center;
-      padding: 4px 6px; overflow: hidden;
-    }
-    .answer-q-pane.hidden { display: none; }
-    .answer-q-pane img {
-      max-width: 100%; max-height: 100%; width: auto; height: auto;
-      object-fit: contain; display: block;
-    }
+// 日時セルを日本時間の yyyy-MM-dd に正規化
+function formatDateKeyJst(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, 'Asia/Tokyo', 'yyyy-MM-dd');
+  }
+  const s = String(val).trim();
+  const m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+  if (m) {
+    return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return Utilities.formatDate(d, 'Asia/Tokyo', 'yyyy-MM-dd');
+  }
+  return '';
+}
 
-    /* 中央ドラッグバー */
-    .split-resizer {
-      flex: 0 0 auto; height: 22px;
-      background: #e5e1d8; border-top: 1px solid #d5d0c5; border-bottom: 1px solid #d5d0c5;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-      cursor: row-resize; touch-action: none; user-select: none;
-    }
-    .split-resizer.hidden { display: none; }
-    .resizer-grip {
-      width: 38px; height: 4px; border-radius: 99px; background: #9ca39f;
-    }
-    .resizer-hint { font-size: 10px; color: #666d68; font-weight: 600; }
+// yyyy-MM-dd に対して日数を加減算
+function addDaysToKey(dateKey, deltaDays) {
+  const parts = dateKey.split('-').map(Number);
+  const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + deltaDays));
+  const y = dt.getUTCFullYear();
+  const m = ('0' + (dt.getUTCMonth() + 1)).slice(-2);
+  const d = ('0' + dt.getUTCDate()).slice(-2);
+  return y + '-' + m + '-' + d;
+}
 
-    /* 解答側エリア（ツールバー＋スクロール領域） */
-    .answer-a-col {
-      flex: 1 1 auto; min-height: 0; min-width: 0;
-      display: flex; flex-direction: column; overflow: hidden;
-    }
-    .answer-toolbar {
-      flex: 0 0 auto;
-      display: flex; align-items: center; justify-content: space-between; gap: 6px;
-      padding: 5px 8px;
-      background: #f3f0e8; border-bottom: 1px solid var(--border);
-    }
-    .page-tabs { display: flex; align-items: center; gap: 4px; }
-    .page-tab {
-      border: 1px solid #cfc9bc; background: #fff; color: #3a3f3b;
-      font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 6px; cursor: pointer;
-    }
-    .page-tab.active {
-      background: #1f2937; color: #fff; border-color: #1f2937;
-    }
-    .zoom-group { display: flex; align-items: center; gap: 3px; }
-    .zoom-btn {
-      border: 1px solid #cfc9bc; background: #fff; color: var(--text);
-      font-size: 13px; font-weight: 700; min-width: 28px; height: 26px;
-      border-radius: 6px; cursor: pointer; padding: 0 6px;
-      display: inline-flex; align-items: center; justify-content: center;
-    }
-    .zoom-val {
-      font-size: 11px; font-weight: 700; color: #3a3f3b;
-      min-width: 42px; text-align: center; cursor: pointer;
-      font-variant-numeric: tabular-nums;
-    }
+// 解答履歴から日別解答数・連続記録を集計
+function getStreakData(goalCount) {
+  const goal = Math.max(1, parseInt(goalCount || '5', 10) || 5);
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hSheet = ss.getSheetByName('解答履歴');
+  const dailyCounts = {};
 
-    .answer-stage {
-      flex: 1 1 auto; min-height: 0;
-      overflow: auto; -webkit-overflow-scrolling: touch;
-      background: #eae7df; padding: 4px 3px 10px;
+  if (hSheet && hSheet.getLastRow() > 1) {
+    const rows = hSheet.getRange(2, 1, hSheet.getLastRow() - 1, 1).getValues();
+    for (let i = 0; i < rows.length; i++) {
+      const key = formatDateKeyJst(rows[i][0]);
+      if (!key) continue;
+      dailyCounts[key] = (dailyCounts[key] || 0) + 1;
     }
-    .answer-img-stack {
-      display: flex; flex-direction: column; gap: 6px;
-      width: 100%; transform-origin: top left;
+  }
+
+  const todayKey = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+  const todayCount = dailyCounts[todayKey] || 0;
+
+  const achievedDates = Object.keys(dailyCounts)
+    .filter(k => dailyCounts[k] >= goal)
+    .sort();
+  const achievedSet = new Set(achievedDates);
+  const todayAchieved = achievedSet.has(todayKey);
+
+  // 現在の連続記録（今日達成なら今日から遡る。未達でも昨日まで続いていれば継続中として表示）
+  let currentStreak = 0;
+  let cursor = todayAchieved ? todayKey : addDaysToKey(todayKey, -1);
+  while (achievedSet.has(cursor)) {
+    currentStreak++;
+    cursor = addDaysToKey(cursor, -1);
+  }
+
+  // 最長連続記録
+  let bestStreak = 0;
+  let run = 0;
+  for (let i = 0; i < achievedDates.length; i++) {
+    if (i > 0 && addDaysToKey(achievedDates[i - 1], 1) === achievedDates[i]) {
+      run++;
+    } else {
+      run = 1;
     }
-    .answer-img-stack img {
-      width: 100%; height: auto; display: block;
-      background: #fff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    if (run > bestStreak) bestStreak = run;
+  }
+
+  return {
+    goal: goal,
+    todayKey: todayKey,
+    todayCount: todayCount,
+    todayAchieved: todayAchieved,
+    currentStreak: currentStreak,
+    streakPendingToday: !todayAchieved && currentStreak > 0,
+    bestStreak: bestStreak,
+    totalAchievedDays: achievedDates.length,
+    dailyCounts: dailyCounts
+  };
+}
+
+// Googleログインのトークンを検証し、許可ユーザーか確認
+function verifyUser(idToken) {
+  if (!idToken) throw new Error('ログインが必要です');
+  const res = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken), {
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) throw new Error('認証に失敗しました。再度ログインしてください');
+  const info = JSON.parse(res.getContentText());
+  const email = (info.email || '').toLowerCase();
+  
+  const settings = getSettingsMap();
+  const allowed = (settings['許可メール'] || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  if (!allowed.includes(email)) {
+    throw new Error('このGoogleアカウント（' + email + '）は利用許可されていません');
+  }
+  return email;
+}
+
+function doPost(e) {
+  try {
+    const req = JSON.parse(e.postData.contents);
+    const email = verifyUser(req.idToken);
+    const action = req.action;
+    let result = {};
+
+    if (action === 'getDailyProblems') {
+      result = getDailyProblems(req.excludeIds || [], req.limit || null);
+    } else if (action === 'getImage') {
+      result = getImageBase64(req.fileId);
+    } else if (action === 'recordAnswer') {
+      result = recordAnswer(email, req.problemId, req.isCorrect, req.elapsedSec);
+    } else if (action === 'verifyPin') {
+      const settings = getSettingsMap();
+      result = { ok: String(req.pin) === String(settings['PIN'] || '1234') };
+    } else if (action === 'getAdminData') {
+      result = getAdminData(req.pin);
+    } else if (action === 'deleteProblem') {
+      result = deleteProblem(req.pin, req.problemId);
+    } else if (action === 'resetAllRecords') {
+      result = resetAllRecords(req.pin);
+    } else if (action === 'updateSettings') {
+      result = updateSettings(req.pin, req.newSettings);
+    } else {
+      throw new Error('不明なリクエストです');
     }
 
-    /* iPad・PCなど横長画面では自動で左右2分割 */
-    @media (min-width: 768px) and (orientation: landscape) {
-      .split-wrap { flex-direction: row; }
-      .answer-q-pane {
-        height: auto !important;
-        width: 44%;
-        border-right: 1px solid var(--border);
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// 今日の問題を取得（復習ロジック＋連続記録データ）
+function getDailyProblems(excludeIds, customLimit) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const qSheet = ss.getSheetByName('問題一覧');
+  const settings = getSettingsMap();
+  const dailyLimit = customLimit || parseInt(settings['1日の出題数'] || '10', 10);
+  const stampGoal = parseInt(settings['1日のスタンプ目標数'] || '5', 10) || 5;
+  
+  const rows = qSheet.getDataRange().getValues();
+  const todayStr = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
+  const excludeSet = new Set(excludeIds);
+
+  const dueProblems = [];   // 復習期限が来ている問題
+  const newProblems = [];   // 未解答の問題
+  const otherProblems = []; // その他の問題
+
+  let totalActive = 0;
+  let totalAnswered = 0;
+  let totalCorrect = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const id = String(r[0]);
+    const status = String(r[9] || '有効');
+    if (!id || status === '除外') continue;
+
+    totalActive++;
+    const tries = Number(r[12] || 0);
+    const corrects = Number(r[13] || 0);
+    totalAnswered += tries;
+    totalCorrect += corrects;
+
+    if (excludeSet.has(id)) continue;
+
+    const nextDate = r[10] ? formatDateKeyJst(r[10]) : '';
+    const item = {
+      id: id,
+      issue: String(r[1] || ''),
+      corner: String(r[2] || ''),
+      number: String(r[3] || ''),
+      author: String(r[4] || ''),
+      moves: String(r[5] || ''),
+      qImgId: String(r[6] || ''),
+      aImgId1: String(r[7] || ''),
+      aImgId2: String(r[8] || ''),
+      streak: Number(r[11] || 0),
+      tries: tries,
+      corrects: corrects
+    };
+
+    if (tries > 0 && nextDate && nextDate <= todayStr) {
+      dueProblems.push({ item, nextDate, streak: item.streak });
+    } else if (tries === 0) {
+      newProblems.push(item);
+    } else {
+      otherProblems.push(item);
+    }
+  }
+
+  // 復習問題は連続正解数が少ない順（間違えた問題優先）
+  dueProblems.sort((a, b) => a.streak - b.streak || a.nextDate.localeCompare(b.nextDate));
+  
+  // 新規問題はシャッフル
+  shuffleArray(newProblems);
+  shuffleArray(otherProblems);
+
+  const selected = [];
+  for (const d of dueProblems) {
+    if (selected.length < dailyLimit) selected.push(d.item);
+  }
+  for (const n of newProblems) {
+    if (selected.length < dailyLimit) selected.push(n);
+  }
+  for (const o of otherProblems) {
+    if (selected.length < dailyLimit) selected.push(o);
+  }
+
+  return {
+    problems: selected,
+    stats: {
+      totalActive: totalActive,
+      dueCount: dueProblems.length,
+      totalAnswered: totalAnswered,
+      accuracy: totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0
+    },
+    streak: getStreakData(stampGoal),
+    dailyLimit: parseInt(settings['1日の出題数'] || '10', 10),
+    colabUrl: settings['ColabURL'] || ''
+  };
+}
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// 非公開画像をBase64で取得
+function getImageBase64(fileId) {
+  if (!fileId) return { dataUrl: '' };
+  const file = DriveApp.getFileById(fileId);
+  const blob = file.getBlob();
+  const base64 = Utilities.base64Encode(blob.getBytes());
+  return { dataUrl: 'data:' + blob.getContentType() + ';base64,' + base64 };
+}
+
+// 解答を記録（忘却曲線ロジック＋達成判定）
+function recordAnswer(email, problemId, isCorrect, elapsedSec) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const qSheet = ss.getSheetByName('問題一覧');
+  const hSheet = ss.getSheetByName('解答履歴');
+  const settings = getSettingsMap();
+  const stampGoal = parseInt(settings['1日のスタンプ目標数'] || '5', 10) || 5;
+
+  const now = new Date();
+  const todayStr = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd');
+
+  hSheet.appendRow([
+    Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss'),
+    problemId,
+    email,
+    isCorrect ? '○' : '×',
+    Number(elapsedSec || 0)
+  ]);
+
+  const rows = qSheet.getDataRange().getValues();
+  const intervals = [1, 3, 7, 14, 30, 60]; // 復習間隔（日）
+
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(problemId)) {
+      let streak = Number(rows[i][11] || 0);
+      let tries = Number(rows[i][12] || 0) + 1;
+      let corrects = Number(rows[i][13] || 0);
+
+      let addDays = 1;
+      if (isCorrect) {
+        corrects++;
+        addDays = intervals[Math.min(streak, intervals.length - 1)];
+        streak++;
+      } else {
+        streak = 0;
+        addDays = 1; // 間違えたら翌日必ず再出題
       }
-      .split-resizer { display: none !important; }
-      .answer-a-col { flex: 1 1 auto; }
+
+      const nextDate = new Date(now.getTime() + addDays * 24 * 60 * 60 * 1000);
+      const nextDateStr = Utilities.formatDate(nextDate, 'Asia/Tokyo', 'yyyy-MM-dd');
+
+      qSheet.getRange(i + 1, 11, 1, 5).setValues([[nextDateStr, streak, tries, corrects, todayStr]]);
+      break;
     }
-
-    /* 下部ボタン */
-    .bottom-bar {
-      flex: 0 0 auto; padding: 8px 12px 10px;
-      background: var(--card); border-top: 1px solid var(--border);
-      display: flex; gap: 10px;
-    }
-    .btn-ng, .btn-ok {
-      flex: 1; padding: 13px 10px; border: none; border-radius: 12px;
-      color: #fff; font-size: 17px; font-weight: 800; cursor: pointer;
-    }
-    .btn-ng { background: var(--ng); }
-    .btn-ok { background: var(--ok); }
-
-    /* 保護者設定 */
-    .admin-body {
-      flex: 1; overflow-y: auto; padding: 14px;
-      display: flex; flex-direction: column; gap: 16px; max-width: 680px; width: 100%; margin: 0 auto;
-    }
-    .panel {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .panel h3 { margin: 0; font-size: 15px; border-left: 4px solid var(--accent); padding-left: 8px; }
-    .field label { display: block; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
-    .field input {
-      width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;
-    }
-    .prob-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 8px 0; border-bottom: 1px solid #f0ede6; font-size: 13px;
-    }
-    .del-mini {
-      background: #fdecea; color: var(--ng); border: 1px solid #f5c6cb;
-      border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
-    }
-
-    /* ローディング・モーダル */
-    .overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      display: none; align-items: center; justify-content: center; z-index: 999; padding: 20px;
-    }
-    .overlay.show { display: flex; }
-    .modal {
-      background: var(--card); border-radius: 14px; padding: 20px;
-      width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 12px; text-align: center;
-    }
-    .spinner {
-      width: 36px; height: 36px; border: 4px solid #e0ddd5; border-top-color: var(--accent);
-      border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .err-msg { color: var(--ng); font-size: 13px; min-height: 18px; }
-  </style>
-</head>
-<body>
-
-  <!-- 1. ログイン画面 -->
-  <section id="scr-login" class="screen active">
-    <div class="center-box">
-      <div class="app-logo">詰パラ演習アプリ</div>
-      <div class="sub-text">許可されたGoogleアカウントで<br>ログインしてご利用ください</div>
-      <div id="g-signin-btn"></div>
-      <div id="login-err" class="err-msg"></div>
-    </div>
-  </section>
-
-  <!-- 2. ホーム画面 -->
-  <section id="scr-home" class="screen">
-    <div class="header">
-      <div class="header-title">詰パラ演習</div>
-      <div style="display:flex; gap:8px;">
-        <button class="icon-btn" onclick="openPinModal()">⚙ 保護者</button>
-        <button class="icon-btn" onclick="logout()">ログアウト</button>
-      </div>
-    </div>
-    <div class="home-body">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-num" id="st-due">-</div>
-          <div class="stat-label">復習待ち</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="st-total">-</div>
-          <div class="stat-label">収録問題数</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="st-acc">-</div>
-          <div class="stat-label">累計正答率</div>
-        </div>
-      </div>
-
-      <button id="btn-start" class="primary-btn" onclick="startSession(false)">今日の10問をはじめる</button>
-      <div id="home-msg" class="sub-text" style="text-align:center;"></div>
-    </div>
-  </section>
-
-  <!-- 3. 問題画面 -->
-  <section id="scr-question" class="screen">
-    <div class="header">
-      <div class="header-title" id="q-progress">1 / 10</div>
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span id="q-timer" style="font-size:13px; color:var(--sub); font-variant-numeric:tabular-nums;">00:00</span>
-        <button class="icon-btn" onclick="quitSession()">中断</button>
-      </div>
-    </div>
-    <div class="meta-bar">
-      <span id="q-meta-left">-</span>
-      <span id="q-meta-right">-</span>
-    </div>
-    <div class="board-stage">
-      <div id="q-loading" class="spinner"></div>
-      <img id="q-img" alt="問題図" style="display:none;" />
-    </div>
-    <div class="bottom-bar">
-      <button class="primary-btn" onclick="showAnswer()">解答を見る</button>
-    </div>
-  </section>
-
-  <!-- 4. 解答画面（問題図＋解答の同時表示） -->
-  <section id="scr-answer" class="screen">
-    <div class="header">
-      <div class="header-title" id="a-title">解答</div>
-      <div class="ratio-group" role="group" aria-label="表示比率切替">
-        <button class="ratio-btn active" id="ratio-std" onclick="setSplitMode('std')">標準</button>
-        <button class="ratio-btn" id="ratio-wide" onclick="setSplitMode('wide')">広め</button>
-        <button class="ratio-btn" id="ratio-full" onclick="setSplitMode('full')">解答のみ</button>
-      </div>
-    </div>
-
-    <div class="split-wrap" id="split-wrap">
-      <!-- 上段（横画面は左）：問題図を常時固定 -->
-      <div class="answer-q-pane" id="answer-q-pane">
-        <img id="a-q-img" alt="問題図" />
-      </div>
-
-      <!-- 中央ドラッグハンドル（スマホ縦画面用） -->
-      <div class="split-resizer" id="split-resizer" title="上下にドラッグして高さ調整">
-        <div class="resizer-grip"></div>
-        <span class="resizer-hint">上下ドラッグで調整</span>
-      </div>
-
-      <!-- 下段（横画面は右）：解答ツールバー＋解答画像 -->
-      <div class="answer-a-col">
-        <div class="answer-toolbar">
-          <div class="page-tabs">
-            <button class="page-tab active" id="tab-p1" onclick="scrollToAnswerImg(1)">1/2</button>
-            <button class="page-tab" id="tab-p2" onclick="scrollToAnswerImg(2)">2/2</button>
-          </div>
-          <div class="zoom-group">
-            <button class="zoom-btn" onclick="changeZoom(-30)" aria-label="縮小">−</button>
-            <span class="zoom-val" id="zoom-val" onclick="resetZoom()" title="タップで100%に戻す">100%</span>
-            <button class="zoom-btn" onclick="changeZoom(30)" aria-label="拡大">＋</button>
-          </div>
-        </div>
-
-        <div class="answer-stage" id="a-stage" onscroll="syncAnswerPageTab()">
-          <div id="a-loading" class="spinner" style="margin:30px auto;"></div>
-          <div class="answer-img-stack" id="a-img-stack">
-            <img id="a-img1" alt="解答1" style="display:none;" />
-            <img id="a-img2" alt="解答2" style="display:none;" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="bottom-bar">
-      <button class="btn-ng" onclick="submitResult(false)">× 不正解</button>
-      <button class="btn-ok" onclick="submitResult(true)">○ 正解</button>
-    </div>
-  </section>
-
-  <!-- 5. 完了画面 -->
-  <section id="scr-done" class="screen">
-    <div class="header">
-      <div class="header-title">おつかれさまでした！</div>
-    </div>
-    <div class="center-box">
-      <div class="app-logo" id="done-score">8 / 10 問正解</div>
-      <div class="sub-text" id="done-sub">今日の演習が完了しました。<br>間違えた問題は次回優先して出題されます。</div>
-      <button class="primary-btn" style="max-width:320px;" onclick="startSession(true)">さらに追加で解く</button>
-      <button class="secondary-btn" style="max-width:320px;" onclick="goHome()">ホームに戻る</button>
-    </div>
-  </section>
-
-  <!-- 6. 保護者設定画面 -->
-  <section id="scr-admin" class="screen">
-    <div class="header">
-      <div class="header-title">保護者設定</div>
-      <button class="icon-btn" onclick="goHome()">閉じる</button>
-    </div>
-    <div class="admin-body">
-      <div class="panel">
-        <h3>新着PDFの自動取り込み</h3>
-        <div class="sub-text" style="font-size:12px;">Googleドライブに新しい号のPDFを入れた後、下のボタンから取り込み画面を開いて▶ボタンを押してください。</div>
-        <button id="btn-colab" class="primary-btn" style="padding:12px; font-size:15px;" onclick="openColab()">新着PDF取り込み画面を開く</button>
-      </div>
-
-      <div class="panel">
-        <h3>基本設定</h3>
-        <div class="field">
-          <label>許可するGoogleメールアドレス（複数の場合はカンマ区切り）</label>
-          <input id="set-emails" type="text" placeholder="aaa@gmail.com, bbb@gmail.com" />
-        </div>
-        <div class="field">
-          <label>1日の出題数</label>
-          <input id="set-limit" type="number" min="1" max="50" />
-        </div>
-        <div class="field">
-          <label>保護者PINコード（数字4桁など）</label>
-          <input id="set-pin" type="text" />
-        </div>
-        <div class="field">
-          <label>Google Colab 取り込みURL</label>
-          <input id="set-colab" type="url" placeholder="https://colab.research.google.com/..." />
-        </div>
-        <button class="primary-btn" style="padding:12px; font-size:15px;" onclick="saveSettings()">設定を保存する</button>
-      </div>
-
-      <div class="panel">
-        <h3>記録の一括消去</h3>
-        <div class="sub-text" style="font-size:12px;">すべての解答履歴と正誤記録をリセットします（問題データ自体は消えません）。</div>
-        <button class="danger-btn" onclick="confirmResetAll()">すべての学習記録を一括消去</button>
-      </div>
-
-      <div class="panel">
-        <h3>問題ごとの消去（<span id="admin-prob-count">0</span>問）</h3>
-        <input id="admin-search" type="text" placeholder="号数・コーナー・作者で絞り込み..." oninput="renderAdminList()" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:8px;" />
-        <div id="admin-prob-list"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- PIN入力モーダル -->
-  <div id="modal-pin" class="overlay">
-    <div class="modal">
-      <div style="font-weight:700; font-size:16px;">保護者PINコードを入力</div>
-      <input id="pin-input" type="password" inputmode="numeric" placeholder="初期値: 1234" style="padding:12px; font-size:18px; text-align:center; border:1px solid var(--border); border-radius:8px;" />
-      <div id="pin-err" class="err-msg"></div>
-      <div style="display:flex; gap:8px;">
-        <button class="secondary-btn" onclick="closePinModal()">キャンセル</button>
-        <button class="primary-btn" style="padding:12px; font-size:15px;" onclick="submitPin()">開く</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 共通ローディング -->
-  <div id="modal-load" class="overlay">
-    <div class="modal" style="max-width:220px;">
-      <div class="spinner"></div>
-      <div id="load-text" style="font-size:14px;">読み込み中...</div>
-    </div>
-  </div>
-
-<script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzd8d8v2bS0mU6Go5-EHRHQF_fE6f-gKq-Hvll1Pw3m4W87cZeq_DA8XFcYe9J9rwfjjg/exec';
-const CLIENT_ID = '845371976716-agdsed0c2ksl1dhf090j79rrvobt4bgj.apps.googleusercontent.com';
-
-let idToken = sessionStorage.getItem('tsumepara_token') || '';
-let currentPin = '';
-let sessionProblems = [];
-let sessionIdx = 0;
-let sessionCorrect = 0;
-let solvedIdsToday = [];
-let imgCache = {};
-let timerId = null;
-let elapsedSec = 0;
-let adminProblems = [];
-let colabUrlCache = '';
-
-// 解答画面の分割・ズーム状態
-let splitMode = 'std'; // 'std' | 'wide' | 'full' | 'custom'
-let splitRatio = 43;   // 問題図エリアの高さ(%)
-let answerZoom = 100;  // 解答画像の拡大率(%)
-
-window.onload = () => {
-  initSplitResizer();
-  if (typeof google !== 'undefined' && google.accounts) {
-    initGoogleAuth();
-  } else {
-    setTimeout(() => { if (typeof google !== 'undefined') initGoogleAuth(); }, 800);
   }
-  if (idToken) {
-    loadHome();
-  }
-};
 
-function initGoogleAuth() {
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: (res) => {
-      idToken = res.credential;
-      sessionStorage.setItem('tsumepara_token', idToken);
-      document.getElementById('login-err').textContent = '';
-      loadHome();
-    }
-  });
-  google.accounts.id.renderButton(document.getElementById('g-signin-btn'), {
-    theme: 'outline', size: 'large', width: 260, text: 'signin_with'
-  });
-}
+  const streakData = getStreakData(stampGoal);
+  const justAchievedToday = (streakData.todayCount === stampGoal);
 
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-function setLoading(show, text = '読み込み中...') {
-  document.getElementById('load-text').textContent = text;
-  document.getElementById('modal-load').classList.toggle('show', show);
-}
-
-async function api(action, payload = {}) {
-  const res = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action, idToken, ...payload })
-  });
-  const json = await res.json();
-  if (json.status !== 'ok') {
-    if (json.message && (json.message.includes('認証') || json.message.includes('ログイン'))) {
-      logout(json.message);
-    }
-    throw new Error(json.message || '通信エラーが発生しました');
-  }
-  return json.data;
-}
-
-function logout(msg = '') {
-  idToken = '';
-  sessionStorage.removeItem('tsumepara_token');
-  stopTimer();
-  showScreen('scr-login');
-  document.getElementById('login-err').textContent = msg;
-}
-
-async function loadHome() {
-  setLoading(true, 'データを読み込み中...');
-  try {
-    const data = await api('getDailyProblems', { excludeIds: [], limit: 1 });
-    document.getElementById('st-due').textContent = data.stats.dueCount;
-    document.getElementById('st-total').textContent = data.stats.totalActive;
-    document.getElementById('st-acc').textContent = data.stats.accuracy + '%';
-    colabUrlCache = data.colabUrl || '';
-
-    const btn = document.getElementById('btn-start');
-    btn.textContent = `今日の${data.dailyLimit}問をはじめる`;
-    if (data.stats.totalActive === 0) {
-      btn.disabled = true;
-      document.getElementById('home-msg').textContent = 'まだ問題が登録されていません。保護者設定からPDFを取り込んでください。';
-    } else {
-      btn.disabled = false;
-      document.getElementById('home-msg').textContent = '';
-    }
-    showScreen('scr-home');
-  } catch (e) {
-    document.getElementById('login-err').textContent = e.message;
-    showScreen('scr-login');
-  } finally {
-    setLoading(false);
-  }
-}
-
-function goHome() {
-  stopTimer();
-  loadHome();
-}
-
-async function startSession(isExtra) {
-  setLoading(true, '問題を用意しています...');
-  try {
-    const data = await api('getDailyProblems', { excludeIds: isExtra ? solvedIdsToday : [] });
-    if (!data.problems || data.problems.length === 0) {
-      alert('出題できる新しい問題がありませんでした。');
-      return;
-    }
-    sessionProblems = data.problems;
-    sessionIdx = 0;
-    sessionCorrect = 0;
-    showCurrentProblem();
-  } catch (e) {
-    alert(e.message);
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function fetchImage(fileId) {
-  if (!fileId) return '';
-  if (imgCache[fileId]) return imgCache[fileId];
-  const data = await api('getImage', { fileId });
-  imgCache[fileId] = data.dataUrl;
-  return data.dataUrl;
-}
-
-async function showCurrentProblem() {
-  const p = sessionProblems[sessionIdx];
-  showScreen('scr-question');
-
-  document.getElementById('q-progress').textContent = `${sessionIdx + 1} / ${sessionProblems.length}`;
-  document.getElementById('q-meta-left').textContent = `${p.issue} ${p.corner} ${p.number}`;
-  document.getElementById('q-meta-right').textContent = `${p.moves ? p.moves + '手' : ''} ${p.author}`;
-
-  const qImg = document.getElementById('q-img');
-  const qLoad = document.getElementById('q-loading');
-  qImg.style.display = 'none';
-  qLoad.style.display = 'block';
-
-  startTimer();
-
-  try {
-    const src = await fetchImage(p.qImgId);
-    qImg.src = src;
-    qImg.style.display = 'block';
-    qLoad.style.display = 'none';
-    // 解答画像と次の問題図を裏で先読み
-    if (p.aImgId1) fetchImage(p.aImgId1).catch(() => {});
-    if (p.aImgId2) fetchImage(p.aImgId2).catch(() => {});
-    if (sessionProblems[sessionIdx + 1]) {
-      fetchImage(sessionProblems[sessionIdx + 1].qImgId).catch(() => {});
-    }
-  } catch (e) {
-    qLoad.style.display = 'none';
-    alert('画像の読み込みに失敗しました: ' + e.message);
-  }
-}
-
-/* ====== 解答画面（2分割・ズーム・ページ切替） ====== */
-function applySplitLayout() {
-  const qPane = document.getElementById('answer-q-pane');
-  const resizer = document.getElementById('split-resizer');
-
-  document.getElementById('ratio-std').classList.toggle('active', splitMode === 'std');
-  document.getElementById('ratio-wide').classList.toggle('active', splitMode === 'wide');
-  document.getElementById('ratio-full').classList.toggle('active', splitMode === 'full');
-
-  if (splitMode === 'full') {
-    qPane.classList.add('hidden');
-    resizer.classList.add('hidden');
-  } else {
-    qPane.classList.remove('hidden');
-    resizer.classList.remove('hidden');
-    qPane.style.height = splitRatio + '%';
-  }
-}
-
-function setSplitMode(mode) {
-  splitMode = mode;
-  if (mode === 'std') splitRatio = 43;
-  else if (mode === 'wide') splitRatio = 28;
-  applySplitLayout();
-}
-
-function initSplitResizer() {
-  const resizer = document.getElementById('split-resizer');
-  const wrap = document.getElementById('split-wrap');
-  let dragging = false;
-
-  const updateFromClientY = (clientY) => {
-    const rect = wrap.getBoundingClientRect();
-    if (rect.height <= 0) return;
-    let pct = ((clientY - rect.top) / rect.height) * 100;
-    pct = Math.max(18, Math.min(70, pct));
-    splitMode = 'custom';
-    splitRatio = Math.round(pct);
-    applySplitLayout();
+  return {
+    ok: true,
+    streak: streakData,
+    justAchievedToday: justAchievedToday
   };
+}
 
-  resizer.addEventListener('touchstart', (e) => {
-    dragging = true;
-    e.preventDefault();
-  }, { passive: false });
+// 保護者設定用データ取得
+function getAdminData(pin) {
+  const settings = getSettingsMap();
+  if (String(pin) !== String(settings['PIN'] || '1234')) throw new Error('PINが正しくありません');
 
-  window.addEventListener('touchmove', (e) => {
-    if (!dragging || !e.touches.length) return;
-    updateFromClientY(e.touches[0].clientY);
-    e.preventDefault();
-  }, { passive: false });
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const qSheet = ss.getSheetByName('問題一覧');
+  const rows = qSheet.getDataRange().getValues();
+  const list = [];
 
-  window.addEventListener('touchend', () => { dragging = false; });
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r[0] || String(r[9]) === '除外') continue;
+    list.push({
+      id: String(r[0]),
+      issue: String(r[1] || ''),
+      corner: String(r[2] || ''),
+      number: String(r[3] || ''),
+      author: String(r[4] || ''),
+      moves: String(r[5] || ''),
+      tries: Number(r[12] || 0),
+      corrects: Number(r[13] || 0)
+    });
+  }
+  return { problems: list, settings: settings };
+}
 
-  resizer.addEventListener('mousedown', (e) => {
-    dragging = true;
-    e.preventDefault();
+// 問題ごとの消去（除外ステータスに変更）
+function deleteProblem(pin, problemId) {
+  const settings = getSettingsMap();
+  if (String(pin) !== String(settings['PIN'] || '1234')) throw new Error('PINが正しくありません');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const qSheet = ss.getSheetByName('問題一覧');
+  const rows = qSheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(problemId)) {
+      qSheet.getRange(i + 1, 10).setValue('除外');
+      break;
+    }
+  }
+  return { ok: true };
+}
+
+// 記録の一括消去
+function resetAllRecords(pin) {
+  const settings = getSettingsMap();
+  if (String(pin) !== String(settings['PIN'] || '1234')) throw new Error('PINが正しくありません');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hSheet = ss.getSheetByName('解答履歴');
+  if (hSheet.getLastRow() > 1) {
+    hSheet.deleteRows(2, hSheet.getLastRow() - 1);
+  }
+
+  const qSheet = ss.getSheetByName('問題一覧');
+  if (qSheet.getLastRow() > 1) {
+    const numRows = qSheet.getLastRow() - 1;
+    const emptyRecords = Array.from({ length: numRows }, () => ['', 0, 0, 0, '']);
+    qSheet.getRange(2, 11, numRows, 5).setValues(emptyRecords);
+  }
+  return { ok: true };
+}
+
+// 設定の更新（未登録のキーは自動追記）
+function updateSettings(pin, newSettings) {
+  const settings = getSettingsMap();
+  if (String(pin) !== String(settings['PIN'] || '1234')) throw new Error('PINが正しくありません');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sSheet = ss.getSheetByName('設定');
+  const data = sSheet.getDataRange().getValues();
+  const updatedKeys = new Set();
+
+  for (let i = 1; i < data.length; i++) {
+    const key = String(data[i][0]).trim();
+    if (newSettings[key] !== undefined) {
+      sSheet.getRange(i + 1, 2).setValue(String(newSettings[key]).trim());
+      updatedKeys.add(key);
+    }
+  }
+
+  Object.keys(newSettings).forEach(key => {
+    if (!updatedKeys.has(key) && newSettings[key] !== undefined) {
+      sSheet.appendRow([key, String(newSettings[key]).trim()]);
+    }
   });
 
-  window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    updateFromClientY(e.clientY);
-  });
-
-  window.addEventListener('mouseup', () => { dragging = false; });
+  return { ok: true };
 }
-
-function applyZoom() {
-  const stack = document.getElementById('a-img-stack');
-  stack.style.width = answerZoom + '%';
-  document.getElementById('zoom-val').textContent = answerZoom + '%';
-}
-
-function changeZoom(delta) {
-  answerZoom = Math.max(100, Math.min(250, answerZoom + delta));
-  applyZoom();
-}
-
-function resetZoom() {
-  answerZoom = 100;
-  applyZoom();
-  document.getElementById('a-stage').scrollLeft = 0;
-}
-
-function scrollToAnswerImg(pageNum) {
-  const stage = document.getElementById('a-stage');
-  const target = document.getElementById(pageNum === 1 ? 'a-img1' : 'a-img2');
-  if (!target || target.style.display === 'none') return;
-  stage.scrollTo({ top: Math.max(0, target.offsetTop - 4), behavior: 'smooth' });
-  setActivePageTab(pageNum);
-}
-
-function setActivePageTab(pageNum) {
-  document.getElementById('tab-p1').classList.toggle('active', pageNum === 1);
-  document.getElementById('tab-p2').classList.toggle('active', pageNum === 2);
-}
-
-function syncAnswerPageTab() {
-  const img2 = document.getElementById('a-img2');
-  if (!img2 || img2.style.display === 'none') return;
-  const stage = document.getElementById('a-stage');
-  const threshold = img2.offsetTop - stage.clientHeight * 0.35;
-  setActivePageTab(stage.scrollTop >= threshold ? 2 : 1);
-}
-
-async function showAnswer() {
-  stopTimer();
-  const p = sessionProblems[sessionIdx];
-  showScreen('scr-answer');
-
-  // ヘッダーに簡潔なタイトル（省略防止）
-  const movesStr = p.moves ? `（${p.moves}手）` : '';
-  document.getElementById('a-title').textContent = `${sessionIdx + 1}/${sessionProblems.length} ${p.number}${movesStr}`;
-
-  // 前回「解答のみ」にしていた場合は次問で見やすいよう標準に戻す
-  if (splitMode === 'full') setSplitMode('std');
-  else applySplitLayout();
-
-  // ズームとスクロールをリセット
-  resetZoom();
-  const stage = document.getElementById('a-stage');
-  stage.scrollTop = 0;
-
-  // 上段の問題図をセット
-  const aQImg = document.getElementById('a-q-img');
-  const qSrc = imgCache[p.qImgId] || document.getElementById('q-img').src;
-  if (qSrc) {
-    aQImg.src = qSrc;
-  } else {
-    fetchImage(p.qImgId).then(src => { aQImg.src = src; }).catch(() => {});
-  }
-
-  // ページ切替タブの調整（1枚のみ／2枚あり）
-  const hasTwo = Boolean(p.aImgId2);
-  const tab1 = document.getElementById('tab-p1');
-  const tab2 = document.getElementById('tab-p2');
-  tab1.textContent = hasTwo ? '1/2' : '1/1';
-  tab2.style.display = hasTwo ? 'inline-block' : 'none';
-  setActivePageTab(1);
-
-  const img1 = document.getElementById('a-img1');
-  const img2 = document.getElementById('a-img2');
-  const aLoad = document.getElementById('a-loading');
-  img1.style.display = 'none';
-  img2.style.display = 'none';
-  aLoad.style.display = 'block';
-
-  try {
-    if (p.aImgId1) {
-      img1.src = await fetchImage(p.aImgId1);
-      img1.style.display = 'block';
-    }
-    if (p.aImgId2) {
-      img2.src = await fetchImage(p.aImgId2);
-      img2.style.display = 'block';
-    }
-  } catch (e) {
-    alert('解答画像の読み込みに失敗しました: ' + e.message);
-  } finally {
-    aLoad.style.display = 'none';
-  }
-}
-
-async function submitResult(isCorrect) {
-  const p = sessionProblems[sessionIdx];
-  setLoading(true, '記録中...');
-  try {
-    await api('recordAnswer', { problemId: p.id, isCorrect, elapsedSec });
-    if (isCorrect) sessionCorrect++;
-    solvedIdsToday.push(p.id);
-    sessionIdx++;
-    if (sessionIdx < sessionProblems.length) {
-      showCurrentProblem();
-    } else {
-      document.getElementById('done-score').textContent = `${sessionCorrect} / ${sessionProblems.length} 問正解`;
-      showScreen('scr-done');
-    }
-  } catch (e) {
-    alert('記録に失敗しました: ' + e.message);
-  } finally {
-    setLoading(false);
-  }
-}
-
-function quitSession() {
-  if (confirm('演習を中断してホームに戻りますか？')) goHome();
-}
-
-function startTimer() {
-  stopTimer();
-  elapsedSec = 0;
-  updateTimerView();
-  timerId = setInterval(() => { elapsedSec++; updateTimerView(); }, 1000);
-}
-function stopTimer() {
-  if (timerId) { clearInterval(timerId); timerId = null; }
-}
-function updateTimerView() {
-  const m = String(Math.floor(elapsedSec / 60)).padStart(2, '0');
-  const s = String(elapsedSec % 60).padStart(2, '0');
-  document.getElementById('q-timer').textContent = `${m}:${s}`;
-}
-
-// 保護者設定
-function openPinModal() {
-  document.getElementById('pin-input').value = '';
-  document.getElementById('pin-err').textContent = '';
-  document.getElementById('modal-pin').classList.add('show');
-  setTimeout(() => document.getElementById('pin-input').focus(), 100);
-}
-function closePinModal() {
-  document.getElementById('modal-pin').classList.remove('show');
-}
-async function submitPin() {
-  const pin = document.getElementById('pin-input').value.trim();
-  if (!pin) return;
-  setLoading(true, '確認中...');
-  try {
-    const data = await api('getAdminData', { pin });
-    currentPin = pin;
-    adminProblems = data.problems || [];
-    document.getElementById('set-emails').value = data.settings['許可メール'] || '';
-    document.getElementById('set-limit').value = data.settings['1日の出題数'] || '10';
-    document.getElementById('set-pin').value = data.settings['PIN'] || '1234';
-    document.getElementById('set-colab').value = data.settings['ColabURL'] || '';
-    colabUrlCache = data.settings['ColabURL'] || '';
-    renderAdminList();
-    closePinModal();
-    showScreen('scr-admin');
-  } catch (e) {
-    document.getElementById('pin-err').textContent = e.message;
-  } finally {
-    setLoading(false);
-  }
-}
-
-function renderAdminList() {
-  const kw = document.getElementById('admin-search').value.trim().toLowerCase();
-  const filtered = adminProblems.filter(p =>
-    `${p.issue} ${p.corner} ${p.number} ${p.author}`.toLowerCase().includes(kw)
-  );
-  document.getElementById('admin-prob-count').textContent = filtered.length;
-  const wrap = document.getElementById('admin-prob-list');
-  wrap.innerHTML = '';
-  filtered.slice(0, 150).forEach(p => {
-    const movesText = p.moves ? `（${p.moves}手）` : '';
-    const row = document.createElement('div');
-    row.className = 'prob-row';
-    row.innerHTML = `
-      <div>
-        <div style="font-weight:700;">${p.issue} ${p.corner} ${p.number}${movesText}</div>
-        <div style="font-size:12px; color:var(--sub);">${p.author} ｜ 正解 ${p.corrects}/${p.tries}</div>
-      </div>
-      <button class="del-mini" onclick="deleteOne('${p.id}')">消去</button>
-    `;
-    wrap.appendChild(row);
-  });
-}
-
-async function deleteOne(problemId) {
-  if (!confirm('この問題をアプリの出題対象から消去しますか？')) return;
-  setLoading(true, '消去中...');
-  try {
-    await api('deleteProblem', { pin: currentPin, problemId });
-    adminProblems = adminProblems.filter(p => p.id !== problemId);
-    renderAdminList();
-  } catch (e) {
-    alert(e.message);
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function confirmResetAll() {
-  if (!confirm('本当にすべての解答履歴・正誤記録を消去しますか？')) return;
-  if (!confirm('元に戻せません。実行してよろしいですか？')) return;
-  setLoading(true, '記録を消去中...');
-  try {
-    await api('resetAllRecords', { pin: currentPin });
-    alert('すべての学習記録を消去しました。');
-    adminProblems.forEach(p => { p.tries = 0; p.corrects = 0; });
-    renderAdminList();
-  } catch (e) {
-    alert(e.message);
-  } finally {
-    setLoading(false);
-  }
-}
-
-async function saveSettings() {
-  const newSettings = {
-    '許可メール': document.getElementById('set-emails').value.trim(),
-    '1日の出題数': document.getElementById('set-limit').value.trim() || '10',
-    'PIN': document.getElementById('set-pin').value.trim() || '1234',
-    'ColabURL': document.getElementById('set-colab').value.trim()
-  };
-  setLoading(true, '保存中...');
-  try {
-    await api('updateSettings', { pin: currentPin, newSettings });
-    currentPin = newSettings['PIN'];
-    colabUrlCache = newSettings['ColabURL'];
-    alert('設定を保存しました！');
-  } catch (e) {
-    alert(e.message);
-  } finally {
-    setLoading(false);
-  }
-}
-
-function openColab() {
-  const url = document.getElementById('set-colab').value.trim() || colabUrlCache;
-  if (!url) {
-    alert('Google ColabのURLがまだ設定されていません。次のステップで設定します。');
-    return;
-  }
-  window.open(url, '_blank');
-}
-</script>
-</body>
-</html>
